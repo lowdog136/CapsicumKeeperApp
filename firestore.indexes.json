@@ -5,16 +5,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "name",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "pepper-varieties",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
           "fieldPath": "species",
           "order": "ASCENDING"
         },
