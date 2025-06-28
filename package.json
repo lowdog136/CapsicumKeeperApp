@@ -14,7 +14,11 @@
     "build": "quasar build",
     "build:firebase": "quasar build && firebase deploy",
     "deploy": "firebase deploy",
-    "postinstall": "quasar prepare"
+    "postinstall": "quasar prepare",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major",
+    "release:check": "node scripts/release.js"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
