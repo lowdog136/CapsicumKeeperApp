@@ -1,179 +1,234 @@
 <template>
-  <q-card class="variety-card q-mb-md">
-    <q-card-section horizontal>
-      <!-- Изображение сорта -->
-      <q-card-section class="q-pt-xs" style="width: 200px">
-        <q-img
-          v-if="variety.imageUrl"
-          :src="variety.imageUrl"
-          :ratio="1"
-          class="rounded-borders"
-          spinner-color="positive"
+  <q-card class="variety-card" flat bordered>
+    <q-img v-if="variety.imageUrl" :src="variety.imageUrl" height="200px" fit="cover">
+      <div class="absolute-top-right q-pa-sm">
+        <q-btn
+          :icon="variety.isFavorite ? 'favorite' : 'favorite_border'"
+          :color="variety.isFavorite ? 'red' : 'grey'"
+          round
+          flat
+          dense
+          @click="toggleFavorite"
         />
-        <div v-else class="placeholder-image">
-          <q-icon name="local_florist" size="48px" color="grey-4" />
-          <div class="text-grey-6 q-mt-sm">Нет фото</div>
-        </div>
-      </q-card-section>
+      </div>
+    </q-img>
 
-      <!-- Информация о сорте -->
-      <q-card-section class="flex-grow">
-        <div class="row items-center q-mb-sm">
-          <div class="text-h6">{{ variety.name }}</div>
-          <q-btn
-            flat
-            round
-            :color="variety.isFavorite ? 'amber' : 'grey'"
-            :icon="variety.isFavorite ? 'star' : 'star_border'"
-            @click="toggleFavorite"
-            class="q-ml-sm"
-          />
-        </div>
+    <q-card-section>
+      <div class="row items-center justify-between q-mb-sm">
+        <h6 class="q-my-none text-weight-bold">{{ variety.name }}</h6>
+        <q-chip
+          :color="getHeatLevelInfo(variety.heatLevel).color"
+          text-color="white"
+          size="sm"
+          :label="getHeatLevelInfo(variety.heatLevel).name"
+        />
+      </div>
 
-        <div v-if="variety.scientificName" class="text-caption text-grey-6 q-mb-sm">
-          {{ variety.scientificName }}
-        </div>
+      <!-- Научная классификация -->
+      <div class="row items-center q-mb-sm">
+        <q-chip
+          color="primary"
+          text-color="white"
+          size="sm"
+          :label="variety.species"
+          icon="science"
+        />
+        <q-tooltip>
+          {{ getSpeciesInfo(variety.species)?.description }}
+        </q-tooltip>
+      </div>
 
-        <!-- Уровень остроты -->
-        <div class="q-mb-sm">
+      <!-- Цена и количество семян -->
+      <div v-if="variety.price || variety.seedCount" class="row items-center q-mb-sm">
+        <q-chip
+          v-if="variety.price"
+          color="green"
+          text-color="white"
+          size="sm"
+          :label="`${variety.price} ₽`"
+          icon="attach_money"
+        />
+        <q-chip
+          v-if="variety.seedCount"
+          color="orange"
+          text-color="white"
+          size="sm"
+          :label="`${variety.seedCount} семян`"
+          icon="eco"
+        />
+        <q-chip
+          v-if="variety.source"
+          color="blue"
+          text-color="white"
+          size="sm"
+          :label="variety.source"
+          icon="link"
+        />
+      </div>
+
+      <p class="text-body2 q-mb-sm">{{ variety.description }}</p>
+
+      <!-- Цвета плодов -->
+      <div class="row items-center q-mb-sm">
+        <span class="text-caption q-mr-sm">Цвета:</span>
+        <div class="row q-gutter-xs">
           <q-chip
-            :color="heatLevelInfo.color"
-            text-color="white"
-            :label="heatLevelInfo.name"
-            size="sm"
+            v-for="color in variety.color"
+            :key="color"
+            size="xs"
+            :label="color"
+            color="grey-3"
+            text-color="dark"
           />
-          <span class="text-caption q-ml-sm">{{ heatLevelInfo.shuRange }}</span>
         </div>
+      </div>
 
-        <!-- Описание -->
-        <div class="text-body2 q-mb-md">{{ variety.description }}</div>
-
-        <!-- Характеристики -->
-        <div class="row q-gutter-md">
-          <div class="col-6">
-            <div class="text-caption text-grey-6">Высота растения</div>
-            <div class="text-body2">
-              {{ variety.plantHeight.min }}-{{ variety.plantHeight.max }}
-              {{ variety.plantHeight.unit }}
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="text-caption text-grey-6">Время созревания</div>
-            <div class="text-body2">
-              {{ variety.daysToMaturity.min }}-{{ variety.daysToMaturity.max }} дней
-            </div>
-          </div>
-        </div>
-
-        <!-- Цвета плодов -->
-        <div class="q-mt-sm">
-          <div class="text-caption text-grey-6">Цвета плодов</div>
-          <div class="row q-gutter-xs q-mt-xs">
-            <q-chip v-for="color in variety.color" :key="color" :label="color" size="sm" outline />
-          </div>
-        </div>
-
-        <!-- Размер плодов -->
-        <div class="q-mt-sm">
-          <div class="text-caption text-grey-6">Размер плодов</div>
+      <!-- Характеристики растения -->
+      <div class="row q-col-gutter-sm q-mb-sm">
+        <div class="col-6">
+          <div class="text-caption text-grey-6">Высота растения</div>
           <div class="text-body2">
-            {{ variety.fruitSize.length.min }}-{{ variety.fruitSize.length.max }} ×
-            {{ variety.fruitSize.width.min }}-{{ variety.fruitSize.width.max }}
+            {{ variety.plantHeight.min }}-{{ variety.plantHeight.max }}
+            {{ variety.plantHeight.unit }}
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="text-caption text-grey-6">Дни до созревания</div>
+          <div class="text-body2">
+            {{ variety.daysToMaturity.min }}-{{ variety.daysToMaturity.max }} дней
+          </div>
+        </div>
+      </div>
+
+      <!-- Размер плода -->
+      <div class="row q-col-gutter-sm q-mb-sm">
+        <div class="col-6">
+          <div class="text-caption text-grey-6">Длина плода</div>
+          <div class="text-body2">
+            {{ variety.fruitSize.length.min }}-{{ variety.fruitSize.length.max }}
             {{ variety.fruitSize.length.unit }}
           </div>
         </div>
-      </q-card-section>
+        <div class="col-6">
+          <div class="text-caption text-grey-6">Ширина плода</div>
+          <div class="text-body2">
+            {{ variety.fruitSize.width.min }}-{{ variety.fruitSize.width.max }}
+            {{ variety.fruitSize.width.unit }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Происхождение -->
+      <div v-if="variety.origin" class="q-mb-sm">
+        <div class="text-caption text-grey-6">Происхождение</div>
+        <div class="text-body2">{{ variety.origin }}</div>
+      </div>
     </q-card-section>
 
-    <!-- Советы по выращиванию -->
-    <q-separator />
-    <q-card-section v-if="variety.growingTips.length">
-      <div class="text-subtitle2 q-mb-sm">Советы по выращиванию</div>
-      <q-list dense>
-        <q-item v-for="(tip, index) in variety.growingTips" :key="index">
-          <q-item-section avatar>
-            <q-icon name="tips_and_updates" color="positive" />
-          </q-item-section>
-          <q-item-section>{{ tip }}</q-item-section>
-        </q-item>
-      </q-list>
-    </q-card-section>
-
-    <!-- Действия -->
-    <q-separator />
     <q-card-actions align="right">
-      <q-btn flat color="positive" label="Подробнее" @click="showDetails = true" />
-      <q-btn flat color="primary" label="Добавить в сад" @click="addToGarden" />
+      <q-btn flat color="primary" label="Подробнее" @click="showDetails = true" />
+      <q-btn flat color="secondary" label="Добавить в сад" @click="addToGarden" />
     </q-card-actions>
 
     <!-- Диалог с подробностями -->
-    <q-dialog v-model="showDetails" persistent>
-      <q-card style="min-width: 600px; max-width: 90vw">
-        <q-card-section>
+    <q-dialog v-model="showDetails" maximized>
+      <q-card>
+        <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ variety.name }}</div>
-          <div v-if="variety.scientificName" class="text-caption text-grey-6">
-            {{ variety.scientificName }}
-          </div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          <div class="row q-gutter-md">
-            <div class="col-6">
-              <q-img
-                v-if="variety.imageUrl"
-                :src="variety.imageUrl"
-                :ratio="1"
-                class="rounded-borders"
-              />
-            </div>
-            <div class="col-6">
-              <div class="text-subtitle2">Характеристики</div>
-              <q-list dense>
-                <q-item>
-                  <q-item-section>
-                    <q-item-label caption>Острота</q-item-label>
-                    <q-item-label
-                      >{{ heatLevelInfo.name }} ({{ heatLevelInfo.shuRange }})</q-item-label
-                    >
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section>
-                    <q-item-label caption>Категория</q-item-label>
-                    <q-item-label>{{ getCategoryLabel(variety.category) }}</q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-item v-if="variety.origin">
-                  <q-item-section>
-                    <q-item-label caption>Происхождение</q-item-label>
-                    <q-item-label>{{ variety.origin }}</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-          </div>
+          <q-img
+            v-if="variety.imageUrl"
+            :src="variety.imageUrl"
+            height="300px"
+            fit="cover"
+            class="q-mb-md"
+          />
 
-          <div class="q-mt-md">
-            <div class="text-subtitle2">Описание</div>
-            <p>{{ variety.description }}</p>
-          </div>
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-md-6">
+              <h6>Описание</h6>
+              <p>{{ variety.description }}</p>
 
-          <div v-if="variety.growingTips.length" class="q-mt-md">
-            <div class="text-subtitle2">Советы по выращиванию</div>
-            <q-list dense>
-              <q-item v-for="(tip, index) in variety.growingTips" :key="index">
-                <q-item-section avatar>
-                  <q-icon name="tips_and_updates" color="positive" />
-                </q-item-section>
-                <q-item-section>{{ tip }}</q-item-section>
-              </q-item>
-            </q-list>
+              <h6>Научная классификация</h6>
+              <p><strong>Вид:</strong> {{ variety.species }}</p>
+              <p v-if="getSpeciesInfo(variety.species)?.description">
+                {{ getSpeciesInfo(variety.species)?.description }}
+              </p>
+
+              <h6>Характеристики</h6>
+              <ul>
+                <li>
+                  <strong>Острота:</strong> {{ getHeatLevelInfo(variety.heatLevel).name }} ({{
+                    getHeatLevelInfo(variety.heatLevel).shuRange
+                  }})
+                </li>
+                <li><strong>Цвета:</strong> {{ variety.color.join(', ') }}</li>
+                <li>
+                  <strong>Высота:</strong> {{ variety.plantHeight.min }}-{{
+                    variety.plantHeight.max
+                  }}
+                  {{ variety.plantHeight.unit }}
+                </li>
+                <li>
+                  <strong>Созревание:</strong> {{ variety.daysToMaturity.min }}-{{
+                    variety.daysToMaturity.max
+                  }}
+                  дней
+                </li>
+                <li v-if="variety.origin"><strong>Происхождение:</strong> {{ variety.origin }}</li>
+              </ul>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <h6>Советы по выращиванию</h6>
+              <ul>
+                <li v-for="tip in variety.growingTips" :key="tip">{{ tip }}</li>
+              </ul>
+
+              <h6>Размер плода</h6>
+              <p>
+                Длина: {{ variety.fruitSize.length.min }}-{{ variety.fruitSize.length.max }}
+                {{ variety.fruitSize.length.unit }}<br />
+                Ширина: {{ variety.fruitSize.width.min }}-{{ variety.fruitSize.width.max }}
+                {{ variety.fruitSize.width.unit }}
+              </p>
+
+              <!-- Информация о покупке -->
+              <div v-if="variety.price || variety.seedCount || variety.source" class="q-mt-lg">
+                <h6>Информация о покупке</h6>
+                <div class="row q-col-gutter-sm">
+                  <div v-if="variety.price" class="col-6">
+                    <q-chip
+                      color="green"
+                      text-color="white"
+                      :label="`${variety.price} ₽`"
+                      icon="attach_money"
+                    />
+                  </div>
+                  <div v-if="variety.seedCount" class="col-6">
+                    <q-chip
+                      color="orange"
+                      text-color="white"
+                      :label="`${variety.seedCount} семян`"
+                      icon="eco"
+                    />
+                  </div>
+                </div>
+                <div v-if="variety.source" class="q-mt-sm">
+                  <q-chip color="blue" text-color="white" :label="variety.source" icon="link" />
+                </div>
+              </div>
+            </div>
           </div>
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Закрыть" color="positive" v-close-popup />
-          <q-btn flat label="Добавить в сад" color="primary" @click="addToGarden" v-close-popup />
+          <q-btn flat label="Закрыть" color="primary" v-close-popup />
+          <q-btn unelevated label="Добавить в сад" color="primary" @click="addToGarden" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -181,72 +236,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useQuasar } from 'quasar';
-import type { PepperVariety } from './models';
+import { ref } from 'vue';
 import { useVarietyLibraryStore } from 'src/stores/variety-library';
+import type { PepperVariety } from 'src/components/models';
 
 const props = defineProps<{
   variety: PepperVariety;
 }>();
 
 const emit = defineEmits<{
-  (e: 'add-to-garden', variety: PepperVariety): void;
+  (e: 'addToGarden', variety: PepperVariety): void;
 }>();
 
-const $q = useQuasar();
-const varietyLibraryStore = useVarietyLibraryStore();
-
+const store = useVarietyLibraryStore();
 const showDetails = ref(false);
 
-const heatLevelInfo = computed(() => varietyLibraryStore.getHeatLevelInfo(props.variety.heatLevel));
-
-const getCategoryLabel = (category: string) => {
-  const cat = varietyLibraryStore.categories.find((c) => c.value === category);
-  return cat ? cat.label : category;
-};
+const getHeatLevelInfo = store.getHeatLevelInfo;
+const getSpeciesInfo = store.getSpeciesInfo;
 
 const toggleFavorite = async () => {
-  try {
-    await varietyLibraryStore.toggleFavorite(props.variety.id);
-    $q.notify({
-      color: 'positive',
-      message: props.variety.isFavorite ? 'Убрано из избранного' : 'Добавлено в избранное',
-    });
-  } catch (error) {
-    $q.notify({
-      color: 'negative',
-      message: 'Ошибка при обновлении избранного',
-    });
-  }
+  await store.toggleFavorite(props.variety.id);
 };
 
 const addToGarden = () => {
-  emit('add-to-garden', props.variety);
-  $q.notify({
-    color: 'positive',
-    message: `Сорт "${props.variety.name}" добавлен в сад`,
-  });
+  emit('addToGarden', props.variety);
+  showDetails.value = false;
 };
 </script>
 
 <style scoped>
 .variety-card {
-  max-width: 100%;
+  transition: transform 0.2s ease-in-out;
 }
 
-.placeholder-image {
-  width: 200px;
-  height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-}
-
-.flex-grow {
-  flex: 1;
+.variety-card:hover {
+  transform: translateY(-2px);
 }
 </style>

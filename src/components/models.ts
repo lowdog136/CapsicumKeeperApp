@@ -75,6 +75,7 @@ export interface PepperVariety {
   id: string;
   name: string;
   scientificName?: string;
+  species: CapsicumSpecies;
   description: string;
   heatLevel: HeatLevel;
   color: string[];
@@ -104,6 +105,9 @@ export interface PepperVariety {
   category: PepperCategory;
   imageUrl?: string;
   isFavorite?: boolean;
+  source?: string;
+  price?: number;
+  seedCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -128,6 +132,13 @@ export type PepperCategory =
   | 'ghost' // Призрак
   | 'scotch-bonnet' // Шотландская шапочка
   | 'other'; // Другие
+
+export type CapsicumSpecies =
+  | 'Capsicum annuum' // Самый распространенный вид
+  | 'Capsicum chinense' // Очень острые сорта (Хабанеро, Призрак)
+  | 'Capsicum baccatum' // Южноамериканские сорта
+  | 'Capsicum pubescens' // Рокото, Манзано
+  | 'Capsicum frutescens'; // Табаско, Малагита
 
 export interface HeatLevelInfo {
   level: HeatLevel;
