@@ -15,8 +15,17 @@ const firebaseConfig = {
   measurementId: 'G-4ZESK2ST90',
 };
 
+console.log('🚀 Инициализация Firebase...');
+console.log('📋 Конфигурация Firebase:', firebaseConfig);
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+console.log('✅ Firebase приложение инициализировано');
+
 export { app };
+
 export const db = getFirestore(app);
+console.log('✅ Firestore инициализирован:', db);
+
 export const storage = getStorage(app);
+console.log('✅ Storage инициализирован:', storage);

@@ -174,3 +174,20 @@ export interface HeatLevelInfo {
   description: string;
   color: string;
 }
+
+// Дорожная карта приложения
+export interface RoadmapItem {
+  id: string;
+  title: string;
+  description: string;
+  category: 'feature' | 'improvement' | 'bugfix' | 'ui' | 'backend';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
+  estimatedEffort?: 'small' | 'medium' | 'large' | null;
+  targetVersion?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string | null;
+  notes?: string | null;
+  assignee?: string; // email пользователя
+}
