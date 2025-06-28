@@ -232,26 +232,21 @@ const saveItem = async (itemData: Omit<RoadmapItem, 'id' | 'createdAt' | 'update
     if (editingItem.value) {
       // Обновление существующего элемента
       await roadmapStore.updateItem(editingItem.value.id, itemData);
-      $q.notify({
-        type: 'positive',
-        message: 'Элемент обновлен',
-      });
+      console.log('✅ Элемент обновлен успешно');
+      alert('Элемент обновлен успешно!');
     } else {
       // Добавление нового элемента
       const result = await roadmapStore.addItem(itemData);
       if (result) {
-        $q.notify({
-          type: 'positive',
-          message: 'Элемент добавлен',
-        });
+        console.log('✅ Элемент добавлен успешно');
+        alert('Элемент добавлен успешно!');
       }
     }
   } catch (error) {
-    console.error('Ошибка при сохранении:', error);
-    $q.notify({
-      type: 'negative',
-      message: 'Ошибка при сохранении',
-    });
+    console.error('❌ Ошибка при сохранении:', error);
+    alert(
+      `Ошибка при сохранении: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+    );
   } finally {
     editingItem.value = undefined;
   }
@@ -260,48 +255,43 @@ const saveItem = async (itemData: Omit<RoadmapItem, 'id' | 'createdAt' | 'update
 const deleteItem = async (id: string) => {
   try {
     await roadmapStore.deleteItem(id);
-    $q.notify({
-      type: 'positive',
-      message: 'Элемент удален',
-    });
+    console.log('✅ Элемент удален успешно');
+    alert('Элемент удален успешно!');
   } catch (error) {
-    console.error('Ошибка при удалении:', error);
-    $q.notify({
-      type: 'negative',
-      message: 'Ошибка при удалении',
-    });
+    console.error('❌ Ошибка при удалении:', error);
+    alert(`Ошибка при удалении: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
   }
 };
 
 const createSamples = async () => {
   try {
     await roadmapStore.createSampleItems();
-    $q.notify({
-      type: 'positive',
-      message: 'Примеры элементов созданы',
-    });
+    console.log('✅ Примеры элементов созданы успешно');
+    alert('Примеры элементов созданы успешно!');
   } catch (error) {
-    console.error('Ошибка при создании примеров:', error);
-    $q.notify({
-      type: 'negative',
-      message: 'Ошибка при создании примеров',
-    });
+    console.error('❌ Ошибка при создании примеров:', error);
+    alert(
+      `Ошибка при создании примеров: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+    );
   }
 };
 
 const createTestItem = async () => {
   try {
-    await roadmapStore.createTestItem();
-    $q.notify({
-      type: 'positive',
-      message: 'Тестовый элемент создан',
-    });
+    const result = await roadmapStore.createTestItem();
+    if (result) {
+      console.log('✅ Тестовый элемент создан успешно');
+      // Используем простой alert вместо $q.notify
+      alert('Тестовый элемент создан успешно!');
+    } else {
+      console.error('❌ Не удалось создать тестовый элемент');
+      alert('Ошибка: Не удалось создать тестовый элемент');
+    }
   } catch (error) {
-    console.error('Ошибка при создании тестового элемента:', error);
-    $q.notify({
-      type: 'negative',
-      message: 'Ошибка при создании тестового элемента',
-    });
+    console.error('❌ Ошибка при создании тестового элемента:', error);
+    alert(
+      `Ошибка при создании тестового элемента: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+    );
   }
 };
 
