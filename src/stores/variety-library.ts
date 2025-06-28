@@ -25,6 +25,22 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
   const varieties = ref<PepperVariety[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const lastCheckDate = ref<string | null>(null);
+
+  // Загрузка даты последней проверки из localStorage
+  const loadLastCheckDate = () => {
+    const saved = localStorage.getItem('varietyLibrary_lastCheck');
+    if (saved) {
+      lastCheckDate.value = saved;
+    }
+  };
+
+  // Сохранение даты последней проверки
+  const saveLastCheckDate = () => {
+    const now = new Date().toISOString();
+    lastCheckDate.value = now;
+    localStorage.setItem('varietyLibrary_lastCheck', now);
+  };
 
   // Информация об уровнях остроты
   const heatLevels: HeatLevelInfo[] = [
@@ -285,22 +301,41 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     return filtered;
   };
 
-  // Импорт данных с pepperseeds.ru
-  const importFromPepperSeeds = async () => {
+  // Полный импорт всех данных с pepperseeds.ru
+  const importAllFromPepperSeeds = async () => {
     loading.value = true;
     error.value = null;
 
     try {
-      // Используем парсер для получения данных
+      // Используем парсер для получения всех данных
       const { getAllPepperSeedsVarieties } = await import('src/utils/pepper-seeds-parser');
       const pepperSeedsVarieties = getAllPepperSeedsVarieties();
 
-      // Добавляем сорта в базу
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      // Добавляем все сорта в базу с проверкой на дублирование
       for (const variety of pepperSeedsVarieties) {
+        // Проверяем, существует ли уже сорт с таким названием
+        const existingVariety = varieties.value.find(
+          (v) => v.name.toLowerCase() === variety.name.toLowerCase(),
+        );
+
+        if (existingVariety) {
+          console.log(`Сорт "${variety.name}" уже существует, пропускаем`);
+          skippedCount++;
+          continue;
+        }
+
         await addVariety(variety);
+        addedCount++;
       }
 
-      return pepperSeedsVarieties.length;
+      // Сохраняем дату импорта
+      saveLastCheckDate();
+
+      console.log(`Полный импорт завершен: добавлено ${addedCount}, пропущено ${skippedCount}`);
+      return { added: addedCount, skipped: skippedCount, total: pepperSeedsVarieties.length };
     } catch (err) {
       error.value = 'Ошибка импорта: ' + (err as Error).message;
       console.error('Error importing varieties:', err);
@@ -422,6 +457,158 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     }
   };
 
+  // Проверка наличия дубликатов (без удаления)
+  const checkForDuplicates = () => {
+    const seen = new Set<string>();
+    const duplicates: PepperVariety[] = [];
+
+    // Находим дубликаты по названию (без учета регистра)
+    for (const variety of varieties.value) {
+      const nameLower = variety.name.toLowerCase();
+      if (seen.has(nameLower)) {
+        duplicates.push(variety);
+      } else {
+        seen.add(nameLower);
+      }
+    }
+
+    return {
+      hasDuplicates: duplicates.length > 0,
+      count: duplicates.length,
+      duplicates: duplicates,
+    };
+  };
+
+  // Удаление дубликатов сортов
+  const removeDuplicates = async () => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      // Сначала проверяем наличие дубликатов
+      const duplicateCheck = checkForDuplicates();
+
+      if (!duplicateCheck.hasDuplicates) {
+        console.log('Дубликаты не найдены');
+        return 0;
+      }
+
+      console.log(`Найдено ${duplicateCheck.count} дубликатов для удаления`);
+      console.log(
+        'Дубликаты:',
+        duplicateCheck.duplicates.map((d) => `${d.name} (ID: ${d.id})`),
+      );
+
+      // Удаляем дубликаты из Firebase
+      for (const duplicate of duplicateCheck.duplicates) {
+        try {
+          await deleteVariety(duplicate.id);
+          console.log(`Удален дубликат: ${duplicate.name} (ID: ${duplicate.id})`);
+        } catch (err) {
+          console.error(`Ошибка удаления дубликата ${duplicate.name}:`, err);
+        }
+      }
+
+      // Перезагружаем данные из Firebase
+      await loadVarieties();
+
+      console.log(`Удаление дубликатов завершено. Удалено ${duplicateCheck.count} дубликатов`);
+      return duplicateCheck.count;
+    } catch (err) {
+      error.value = 'Ошибка удаления дубликатов: ' + (err as Error).message;
+      console.error('Error removing duplicates:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // Проверка новых сортов с pepperseeds.ru
+  const checkForNewVarieties = async () => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      // Используем парсер для получения всех данных
+      const { getAllPepperSeedsVarieties } = await import('src/utils/pepper-seeds-parser');
+      const pepperSeedsVarieties = getAllPepperSeedsVarieties();
+
+      let newCount = 0;
+      let existingCount = 0;
+
+      // Проверяем каждый сорт на новизну
+      for (const variety of pepperSeedsVarieties) {
+        const existingVariety = varieties.value.find(
+          (v) => v.name.toLowerCase() === variety.name.toLowerCase(),
+        );
+
+        if (existingVariety) {
+          existingCount++;
+        } else {
+          newCount++;
+        }
+      }
+
+      // Сохраняем дату проверки
+      saveLastCheckDate();
+
+      console.log(`Проверка завершена: новых ${newCount}, существующих ${existingCount}`);
+      return {
+        new: newCount,
+        existing: existingCount,
+        total: pepperSeedsVarieties.length,
+        hasNew: newCount > 0,
+      };
+    } catch (err) {
+      error.value = 'Ошибка проверки: ' + (err as Error).message;
+      console.error('Error checking varieties:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // Импорт только новых сортов
+  const importNewVarieties = async () => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      // Сначала проверяем, какие сорта новые
+      const checkResult = await checkForNewVarieties();
+
+      if (!checkResult.hasNew) {
+        return { added: 0, skipped: 0, message: 'Новых сортов не найдено' };
+      }
+
+      // Импортируем только новые сорта
+      const { getAllPepperSeedsVarieties } = await import('src/utils/pepper-seeds-parser');
+      const pepperSeedsVarieties = getAllPepperSeedsVarieties();
+
+      let addedCount = 0;
+
+      for (const variety of pepperSeedsVarieties) {
+        const existingVariety = varieties.value.find(
+          (v) => v.name.toLowerCase() === variety.name.toLowerCase(),
+        );
+
+        if (!existingVariety) {
+          await addVariety(variety);
+          addedCount++;
+        }
+      }
+
+      console.log(`Импорт новых сортов завершен: добавлено ${addedCount}`);
+      return { added: addedCount, skipped: 0, message: `Добавлено ${addedCount} новых сортов` };
+    } catch (err) {
+      error.value = 'Ошибка импорта новых сортов: ' + (err as Error).message;
+      console.error('Error importing new varieties:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     // State
     varieties,
@@ -430,6 +617,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     heatLevels,
     categories,
     species,
+    lastCheckDate,
 
     // Computed
     favoriteVarieties,
@@ -443,7 +631,13 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     deleteVariety,
     toggleFavorite,
     searchVarieties,
-    importFromPepperSeeds,
+    importAllFromPepperSeeds,
     initializeWithExamples,
+    removeDuplicates,
+    loadLastCheckDate,
+    saveLastCheckDate,
+    checkForNewVarieties,
+    importNewVarieties,
+    checkForDuplicates,
   };
 });

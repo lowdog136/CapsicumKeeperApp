@@ -3,14 +3,36 @@
     <div class="row items-center justify-between q-mb-lg">
       <div>
         <h4 class="q-my-none">Библиотека сортов перца</h4>
-        <p class="text-grey-6 q-mt-sm">Изучите разнообразие сортов перца со всего мира</p>
+        <p class="text-grey-6 q-mt-sm">
+          Изучите разнообразие сортов перца со всего мира.
+          <br />Сорта и описания взяты с сайта
+          <a href="https://pepperseeds.ru" target="_blank" class="text-primary">pepperseeds.ru</a>
+        </p>
+        <div v-if="store.lastCheckDate" class="text-caption text-grey-5 q-mt-xs">
+          Последняя проверка: {{ formatDate(store.lastCheckDate) }}
+        </div>
       </div>
       <div class="row q-gutter-sm">
         <q-btn
           color="primary"
           icon="download"
-          label="Импорт с pepperseeds.ru"
-          @click="importFromPepperSeeds"
+          label="Полный импорт"
+          @click="importAllVarieties"
+          :loading="store.loading"
+        />
+        <q-btn
+          color="info"
+          icon="refresh"
+          label="Проверить новые"
+          @click="checkNewVarieties"
+          :loading="store.loading"
+        />
+        <q-btn color="warning" icon="search" label="Проверить дубликаты" @click="checkDuplicates" />
+        <q-btn
+          color="warning"
+          icon="clean"
+          label="Удалить дубликаты"
+          @click="removeDuplicates"
           :loading="store.loading"
         />
         <q-btn color="secondary" icon="add" label="Добавить сорт" @click="showAddDialog = true" />
@@ -373,31 +395,110 @@ const addVariety = async () => {
   }
 };
 
-const importFromPepperSeeds = async () => {
+const importAllVarieties = async () => {
   try {
-    const count = await store.importFromPepperSeeds();
+    const result = await store.importAllFromPepperSeeds();
     $q.notify({
       color: 'positive',
-      message: `Импортировано ${count} сортов с pepperseeds.ru`,
+      message: `Импортировано ${result.added} новых сортов, пропущено ${result.skipped} существующих`,
       icon: 'download_done',
     });
   } catch (error) {
     $q.notify({
       color: 'negative',
-      message: 'Ошибка при импорте данных',
+      message: 'Ошибка при импорте сортов',
       icon: 'error',
     });
   }
 };
 
+const checkNewVarieties = async () => {
+  try {
+    const result = await store.checkForNewVarieties();
+    if (result.hasNew) {
+      $q.notify({
+        color: 'info',
+        message: `Найдено ${result.new} новых сортов! Нажмите "Полный импорт" для добавления.`,
+        icon: 'info',
+        timeout: 5000,
+      });
+    } else {
+      $q.notify({
+        color: 'positive',
+        message: 'Новых сортов не найдено',
+        icon: 'check_circle',
+      });
+    }
+  } catch (error) {
+    $q.notify({
+      color: 'negative',
+      message: 'Ошибка при проверке новых сортов',
+      icon: 'error',
+    });
+  }
+};
+
+const checkDuplicates = () => {
+  const duplicateCheck = store.checkForDuplicates();
+
+  if (duplicateCheck.hasDuplicates) {
+    $q.notify({
+      color: 'warning',
+      message: `Найдено ${duplicateCheck.count} дубликатов: ${duplicateCheck.duplicates.map((d) => d.name).join(', ')}`,
+      icon: 'warning',
+      timeout: 8000,
+    });
+  } else {
+    $q.notify({
+      color: 'positive',
+      message: 'Дубликаты не найдены',
+      icon: 'check_circle',
+    });
+  }
+};
+
+const removeDuplicates = async () => {
+  try {
+    console.log('Начинаем удаление дубликатов...');
+    const removedCount = await store.removeDuplicates();
+
+    if (removedCount > 0) {
+      $q.notify({
+        color: 'positive',
+        message: `Успешно удалено ${removedCount} дубликатов`,
+        icon: 'check_circle',
+      });
+    } else {
+      $q.notify({
+        color: 'info',
+        message: 'Дубликаты не найдены',
+        icon: 'info',
+      });
+    }
+  } catch (error) {
+    console.error('Ошибка при удалении дубликатов:', error);
+    $q.notify({
+      color: 'negative',
+      message: 'Ошибка при удалении дубликатов',
+      icon: 'error',
+    });
+  }
+};
+
+// Функция форматирования даты
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 // Инициализация
 onMounted(async () => {
-  if (store.varieties.length === 0) {
-    await store.loadVarieties();
-    // Если данных нет, инициализируем примерами
-    if (store.varieties.length === 0) {
-      await store.initializeWithExamples();
-    }
-  }
+  await store.loadVarieties();
+  store.loadLastCheckDate();
 });
 </script>

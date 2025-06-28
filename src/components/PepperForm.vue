@@ -9,14 +9,7 @@
         required
         class="q-mb-sm"
       />
-      <q-input
-        v-model="form.variety"
-        label="Сорт перца*"
-        :error="!!errors.variety"
-        :error-message="errors.variety"
-        required
-        class="q-mb-sm"
-      />
+      <VarietySelector v-model="selectedVariety" :errors="errors" class="q-mb-sm" />
       <q-input
         v-model="form.description"
         label="Описание*"
@@ -379,16 +372,25 @@
           </q-item>
         </q-list>
       </div>
-      <q-btn type="submit" color="positive" label="Добавить перец" class="full-width" />
+      <div class="q-mt-md text-center">
+        <q-btn
+          type="submit"
+          color="positive"
+          label="Сохранить"
+          icon="save"
+          :disable="!isFormComplete"
+        />
+      </div>
     </q-form>
   </q-card>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
-import type { Pepper, FertilizerComposition } from './models';
+import { ref, reactive, computed, watch } from 'vue';
+import type { Pepper, FertilizerComposition, PepperVariety } from './models';
 import SoilExtrasSelector from './SoilExtrasSelector.vue';
 import ImageUpload from './ImageUpload.vue';
+import VarietySelector from './VarietySelector.vue';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -411,6 +413,8 @@ const locationTypes: Pepper['location']['type'][] = [
 
 type SoilExtras = NonNullable<Pepper['soilExtras']>;
 
+const selectedVariety = ref<PepperVariety | null>(null);
+
 const form = ref<Omit<Pepper, 'id'> & { soilExtras: SoilExtras }>({
   name: '',
   variety: '',
@@ -429,6 +433,13 @@ const form = ref<Omit<Pepper, 'id'> & { soilExtras: SoilExtras }>({
     hasSoilImprovement: false,
     soilImprovement: null,
   },
+});
+
+const updateVarietyField = computed(() => {
+  if (selectedVariety.value) {
+    form.value.variety = selectedVariety.value.name;
+  }
+  return form.value.variety;
 });
 
 const errors = reactive({
@@ -613,7 +624,7 @@ function addObservation() {
 
 function validateForm() {
   errors.name = form.value.name ? '' : 'Укажите наименование';
-  errors.variety = form.value.variety ? '' : 'Укажите сорт';
+  errors.variety = selectedVariety.value ? '' : 'Выберите сорт из библиотеки';
   errors.description = form.value.description ? '' : 'Укажите описание';
   errors.stage = form.value.stage ? '' : 'Укажите стадию роста';
   errors.plantingDate = form.value.plantingDate ? '' : 'Укажите дату посадки';
@@ -623,7 +634,30 @@ function validateForm() {
 
 function onSubmit() {
   if (!validateForm()) return;
-  emit('submit', { ...form.value });
+
+  // Создаем объект перца с данными из выбранного сорта
+  const pepperData = {
+    ...form.value,
+    variety: selectedVariety.value?.name || '',
+    // Добавляем дополнительную информацию из выбранного сорта
+    varietyInfo: selectedVariety.value
+      ? {
+          id: selectedVariety.value.id,
+          species: selectedVariety.value.species,
+          heatLevel: selectedVariety.value.heatLevel,
+          origin: selectedVariety.value.origin,
+          color: selectedVariety.value.color,
+          plantHeight: selectedVariety.value.plantHeight,
+          daysToMaturity: selectedVariety.value.daysToMaturity,
+          fruitSize: selectedVariety.value.fruitSize,
+          growingTips: selectedVariety.value.growingTips,
+        }
+      : undefined,
+  };
+
+  emit('submit', pepperData);
+
+  // Сбрасываем форму
   form.value = {
     name: '',
     variety: '',
@@ -643,6 +677,7 @@ function onSubmit() {
       soilImprovement: null,
     },
   };
+  selectedVariety.value = null;
   fertilizerDate.value = today();
   fertilizerNote.value = '';
   fertilizerGrams.value = null;
@@ -657,6 +692,18 @@ function handleImageUploadComplete(result: { url: string; path: string }) {
 function handleImageUploadError(errorMessage: string) {
   console.error('Ошибка загрузки изображения:', errorMessage);
 }
+
+// Проверка заполненности обязательных полей
+const isFormComplete = computed(() => {
+  return (
+    form.value.name &&
+    selectedVariety.value &&
+    form.value.description &&
+    form.value.stage &&
+    form.value.plantingDate &&
+    form.value.location.type
+  );
+});
 
 defineExpose({
   showExtraFertilizer,

@@ -38,34 +38,6 @@
         </q-tooltip>
       </div>
 
-      <!-- Цена и количество семян -->
-      <div v-if="variety.price || variety.seedCount" class="row items-center q-mb-sm">
-        <q-chip
-          v-if="variety.price"
-          color="green"
-          text-color="white"
-          size="sm"
-          :label="`${variety.price} ₽`"
-          icon="attach_money"
-        />
-        <q-chip
-          v-if="variety.seedCount"
-          color="orange"
-          text-color="white"
-          size="sm"
-          :label="`${variety.seedCount} семян`"
-          icon="eco"
-        />
-        <q-chip
-          v-if="variety.source"
-          color="blue"
-          text-color="white"
-          size="sm"
-          :label="variety.source"
-          icon="link"
-        />
-      </div>
-
       <p class="text-body2 q-mb-sm">{{ variety.description }}</p>
 
       <!-- Цвета плодов -->
@@ -196,32 +168,6 @@
                 Ширина: {{ variety.fruitSize.width.min }}-{{ variety.fruitSize.width.max }}
                 {{ variety.fruitSize.width.unit }}
               </p>
-
-              <!-- Информация о покупке -->
-              <div v-if="variety.price || variety.seedCount || variety.source" class="q-mt-lg">
-                <h6>Информация о покупке</h6>
-                <div class="row q-col-gutter-sm">
-                  <div v-if="variety.price" class="col-6">
-                    <q-chip
-                      color="green"
-                      text-color="white"
-                      :label="`${variety.price} ₽`"
-                      icon="attach_money"
-                    />
-                  </div>
-                  <div v-if="variety.seedCount" class="col-6">
-                    <q-chip
-                      color="orange"
-                      text-color="white"
-                      :label="`${variety.seedCount} семян`"
-                      icon="eco"
-                    />
-                  </div>
-                </div>
-                <div v-if="variety.source" class="q-mt-sm">
-                  <q-chip color="blue" text-color="white" :label="variety.source" icon="link" />
-                </div>
-              </div>
             </div>
           </div>
         </q-card-section>

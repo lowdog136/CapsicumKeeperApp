@@ -43,6 +43,36 @@ export interface Pepper {
     hasSoilImprovement: boolean;
     soilImprovement: string | null;
   };
+  // Информация о выбранном сорте из библиотеки
+  varietyInfo?: {
+    id: string;
+    species: CapsicumSpecies;
+    heatLevel: HeatLevel;
+    origin?: string;
+    color: string[];
+    plantHeight: {
+      min: number;
+      max: number;
+      unit: 'cm' | 'inches';
+    };
+    daysToMaturity: {
+      min: number;
+      max: number;
+    };
+    fruitSize: {
+      length: {
+        min: number;
+        max: number;
+        unit: 'cm' | 'inches';
+      };
+      width: {
+        min: number;
+        max: number;
+        unit: 'cm' | 'inches';
+      };
+    };
+    growingTips: string[];
+  };
 }
 
 export interface FertilizerComposition {
@@ -105,9 +135,6 @@ export interface PepperVariety {
   category: PepperCategory;
   imageUrl?: string;
   isFavorite?: boolean;
-  source?: string;
-  price?: number;
-  seedCount?: number;
   createdAt: string;
   updatedAt: string;
 }
