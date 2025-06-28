@@ -183,11 +183,11 @@ export interface RoadmapItem {
   category: 'feature' | 'improvement' | 'bugfix' | 'ui' | 'backend';
   priority: 'low' | 'medium' | 'high' | 'critical';
   status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
-  estimatedEffort?: 'small' | 'medium' | 'large';
-  targetVersion?: string;
+  estimatedEffort?: 'small' | 'medium' | 'large' | null;
+  targetVersion?: string | null;
   createdAt: string;
   updatedAt: string;
-  completedAt?: string;
-  notes?: string;
+  completedAt?: string | null;
+  notes?: string | null;
   assignee?: string; // email пользователя
 }

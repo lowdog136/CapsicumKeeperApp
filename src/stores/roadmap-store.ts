@@ -76,6 +76,9 @@ export const useRoadmapStore = defineStore('roadmap', () => {
         assignee: userStore.user.email!,
         createdAt: now,
         updatedAt: now,
+        targetVersion: item.targetVersion || null,
+        notes: item.notes || null,
+        estimatedEffort: item.estimatedEffort || null,
       };
 
       console.log('Подготовленный элемент:', newItem);
@@ -110,6 +113,9 @@ export const useRoadmapStore = defineStore('roadmap', () => {
       const updateData = {
         ...updates,
         updatedAt: new Date().toISOString(),
+        targetVersion: updates.targetVersion || null,
+        notes: updates.notes || null,
+        estimatedEffort: updates.estimatedEffort || null,
       };
 
       if (updates.status === 'completed' && !updates.completedAt) {
