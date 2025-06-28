@@ -34,6 +34,10 @@
           <q-item-section avatar><q-icon name="favorite" /></q-item-section>
           <q-item-section>Избранное</q-item-section>
         </q-item>
+        <q-item clickable :to="{ path: '/roadmap' }">
+          <q-item-section avatar><q-icon name="assignment" /></q-item-section>
+          <q-item-section>Дорожная карта</q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
