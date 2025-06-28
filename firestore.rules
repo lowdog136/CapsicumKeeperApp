@@ -22,14 +22,11 @@ service cloud.firestore {
     
     // Правила для дорожной карты
     match /roadmap/{itemId} {
-      // Пользователи могут читать только свои элементы дорожной карты
-      allow read: if request.auth != null && resource.data.assignee == request.auth.token.email;
+      // Все могут читать элементы дорожной карты (публичная дорожная карта)
+      allow read: if true;
       
-      // Пользователи могут создавать элементы дорожной карты только для себя
-      allow create: if request.auth != null && request.resource.data.assignee == request.auth.token.email;
-      
-      // Пользователи могут обновлять и удалять только свои элементы дорожной карты
-      allow update, delete: if request.auth != null && resource.data.assignee == request.auth.token.email;
+      // Только пользователь lowdog136@gmail.com может создавать, обновлять и удалять элементы
+      allow create, update, delete: if request.auth != null && request.auth.token.email == "lowdog136@gmail.com";
     }
     
     // Правила для пользователей

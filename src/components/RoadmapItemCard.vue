@@ -35,7 +35,7 @@
       <div class="text-body2"><strong>Заметки:</strong> {{ item.notes }}</div>
     </q-card-section>
 
-    <q-card-actions align="right">
+    <q-card-actions align="right" v-if="canEdit">
       <q-btn flat color="primary" label="Редактировать" @click="$emit('edit', item)" size="sm" />
       <q-btn flat color="negative" label="Удалить" @click="confirmDelete" size="sm" />
     </q-card-actions>
@@ -55,6 +55,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuasar } from 'quasar';
+import { useUserStore } from 'src/stores/user-store';
 import type { RoadmapItem } from './models';
 
 const props = defineProps<{
@@ -67,6 +68,12 @@ const emit = defineEmits<{
 }>();
 
 const $q = useQuasar();
+const userStore = useUserStore();
+
+// Проверка прав на редактирование
+const canEdit = computed(() => {
+  return userStore.user?.email === 'lowdog136@gmail.com';
+});
 
 // Цвета и метки для приоритетов
 const priorityConfig = {
@@ -100,18 +107,69 @@ const effortConfig = {
   large: { label: 'Сложное' },
 };
 
-const priorityColor = computed(() => priorityConfig[props.item.priority].color);
-const priorityLabel = computed(() => priorityConfig[props.item.priority].label);
+const priorityColor = computed(() => {
+  const config = priorityConfig[props.item.priority];
+  if (!config) {
+    console.warn(`Неизвестный приоритет: ${props.item.priority}`, props.item);
+    return 'grey';
+  }
+  return config.color;
+});
 
-const categoryColor = computed(() => categoryConfig[props.item.category].color);
-const categoryLabel = computed(() => categoryConfig[props.item.category].label);
+const priorityLabel = computed(() => {
+  const config = priorityConfig[props.item.priority];
+  if (!config) {
+    console.warn(`Неизвестный приоритет: ${props.item.priority}`, props.item);
+    return props.item.priority || 'Неизвестно';
+  }
+  return config.label;
+});
 
-const statusColor = computed(() => statusConfig[props.item.status].color);
-const statusLabel = computed(() => statusConfig[props.item.status].label);
+const categoryColor = computed(() => {
+  const config = categoryConfig[props.item.category];
+  if (!config) {
+    console.warn(`Неизвестная категория: ${props.item.category}`, props.item);
+    return 'grey';
+  }
+  return config.color;
+});
 
-const effortLabel = computed(() =>
-  props.item.estimatedEffort ? effortConfig[props.item.estimatedEffort].label : '',
-);
+const categoryLabel = computed(() => {
+  const config = categoryConfig[props.item.category];
+  if (!config) {
+    console.warn(`Неизвестная категория: ${props.item.category}`, props.item);
+    return props.item.category || 'Неизвестно';
+  }
+  return config.label;
+});
+
+const statusColor = computed(() => {
+  const config = statusConfig[props.item.status];
+  if (!config) {
+    console.warn(`Неизвестный статус: ${props.item.status}`, props.item);
+    return 'grey';
+  }
+  return config.color;
+});
+
+const statusLabel = computed(() => {
+  const config = statusConfig[props.item.status];
+  if (!config) {
+    console.warn(`Неизвестный статус: ${props.item.status}`, props.item);
+    return props.item.status || 'Неизвестно';
+  }
+  return config.label;
+});
+
+const effortLabel = computed(() => {
+  if (!props.item.estimatedEffort) return '';
+  const config = effortConfig[props.item.estimatedEffort];
+  if (!config) {
+    console.warn(`Неизвестная сложность: ${props.item.estimatedEffort}`, props.item);
+    return props.item.estimatedEffort || 'Неизвестно';
+  }
+  return config.label;
+});
 
 const statusClass = computed(() => ({
   'roadmap-item-completed': props.item.status === 'completed',

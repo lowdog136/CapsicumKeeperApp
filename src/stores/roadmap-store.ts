@@ -9,33 +9,31 @@ import {
   query,
   where,
   orderBy,
-  getDocs,
+  onSnapshot,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from 'src/boot/firebase';
 import { useUserStore } from './user-store';
 import type { RoadmapItem } from 'src/components/models';
 
-type RoadmapUpdate = Partial<Omit<RoadmapItem, 'id' | 'createdAt' | 'assignee' | 'updatedAt'>>;
+type RoadmapUpdate = Omit<RoadmapItem, 'id' | 'createdAt' | 'assignee' | 'updatedAt'>;
 
 export const useRoadmapStore = defineStore('roadmap', () => {
   const items = ref<RoadmapItem[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  let unsubscribe: (() => void) | null = null;
+
+  // Пагинация
+  const currentPage = ref(1);
+  const itemsPerPage = ref(12);
+  const totalPages = computed(() => Math.ceil(items.value.length / itemsPerPage.value));
 
   const userStore = useUserStore();
 
   // Получить все элементы дорожной карты пользователя
   const fetchItems = async () => {
     console.log('=== Начало загрузки элементов дорожной карты ===');
-
-    if (!userStore.user) {
-      error.value = 'Пользователь не авторизован';
-      console.error('❌ Пользователь не авторизован при загрузке');
-      return;
-    }
-
-    console.log('✅ Пользователь авторизован:', userStore.user.email);
 
     loading.value = true;
     error.value = null;
@@ -49,29 +47,59 @@ export const useRoadmapStore = defineStore('roadmap', () => {
 
       console.log('✅ Firestore подключен, создаем запрос...');
 
+      // Отписываемся от предыдущего слушателя, если он есть
+      if (unsubscribe) {
+        console.log('🔄 Отписываемся от предыдущего слушателя');
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      // Создаем запрос для всех элементов дорожной карты (публичная дорожная карта)
       const q = query(
         collection(db, 'roadmap'),
-        where('assignee', '==', userStore.user.email),
-        orderBy('createdAt', 'desc'),
+        orderBy('createdAt', 'desc'), // Сортируем по дате создания
       );
 
-      console.log('🔍 Выполняем запрос к коллекции roadmap...');
-      const querySnapshot = await getDocs(q);
+      console.log('🔍 Подписываемся на изменения коллекции roadmap (все элементы)...');
 
-      console.log('✅ Запрос выполнен, получено документов:', querySnapshot.size);
+      // Подписываемся на изменения в реальном времени
+      unsubscribe = onSnapshot(
+        q,
+        (querySnapshot) => {
+          console.log('✅ Получены изменения, документов:', querySnapshot.size);
+          console.log('🔄 Тип изменений: onSnapshot callback вызван');
 
-      items.value = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        console.log('📄 Документ:', doc.id, '=>', data);
-        return {
-          id: doc.id,
-          ...data,
-        };
-      }) as RoadmapItem[];
+          const newItems = querySnapshot.docs.map((doc) => {
+            const data = doc.data();
+            console.log('📄 Документ:', doc.id, '=>', data);
+            return {
+              id: doc.id,
+              ...data,
+            };
+          }) as RoadmapItem[];
 
-      console.log('✅ Элементы загружены в локальное состояние:', items.value.length);
+          console.log('🔄 Старое количество элементов:', items.value.length);
+          console.log('🔄 Новое количество элементов:', newItems.length);
+          console.log(
+            '🔄 Элементы изменились:',
+            JSON.stringify(items.value) !== JSON.stringify(newItems),
+          );
+
+          items.value = newItems;
+
+          console.log('✅ Элементы обновлены в локальном состоянии:', items.value.length);
+          loading.value = false;
+        },
+        (err) => {
+          console.error('❌ Ошибка при получении изменений:', err);
+          error.value = `Ошибка при получении изменений: ${err.message}`;
+          loading.value = false;
+        },
+      );
+
+      console.log('✅ Подписка на изменения установлена');
     } catch (err) {
-      console.error('❌ Ошибка при загрузке дорожной карты:', err);
+      console.error('❌ Ошибка при настройке подписки:', err);
       console.error('❌ Тип ошибки:', typeof err);
       console.error(
         '❌ Сообщение ошибки:',
@@ -79,11 +107,11 @@ export const useRoadmapStore = defineStore('roadmap', () => {
       );
       console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
 
-      error.value = `Ошибка при загрузке дорожной карты: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
-    } finally {
+      error.value = `Ошибка при настройке подписки: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
       loading.value = false;
-      console.log('=== Конец загрузки элементов дорожной карты ===');
     }
+
+    console.log('=== Конец настройки подписки на элементы дорожной карты ===');
   };
 
   // Добавить новый элемент
@@ -96,7 +124,17 @@ export const useRoadmapStore = defineStore('roadmap', () => {
       return null;
     }
 
-    console.log('✅ Пользователь авторизован:', userStore.user.email);
+    // Проверяем права на редактирование
+    if (userStore.user.email !== 'lowdog136@gmail.com') {
+      error.value = 'У вас нет прав на добавление элементов дорожной карты';
+      console.error('❌ Пользователь не имеет прав на редактирование:', userStore.user.email);
+      return null;
+    }
+
+    console.log(
+      '✅ Пользователь авторизован и имеет права на редактирование:',
+      userStore.user.email,
+    );
     console.log('📝 Исходный элемент:', item);
 
     loading.value = true;
@@ -128,14 +166,13 @@ export const useRoadmapStore = defineStore('roadmap', () => {
       const docRef = await addDoc(collection(db, 'roadmap'), newItem);
       console.log('✅ Элемент добавлен с ID:', docRef.id);
 
+      // Не обновляем локальное состояние вручную - это сделает onSnapshot
+      console.log('✅ Элемент добавлен в Firestore, локальное состояние обновится автоматически');
+
       const createdItem: RoadmapItem = {
         id: docRef.id,
         ...newItem,
       };
-
-      items.value.unshift(createdItem);
-      console.log('✅ Элемент добавлен в локальное состояние');
-      console.log('📊 Всего элементов в локальном состоянии:', items.value.length);
 
       return createdItem;
     } catch (err) {
@@ -157,6 +194,28 @@ export const useRoadmapStore = defineStore('roadmap', () => {
 
   // Обновить элемент
   const updateItem = async (id: string, updates: RoadmapUpdate) => {
+    console.log('=== Начало обновления элемента дорожной карты ===');
+    console.log('🆔 ID элемента:', id);
+    console.log('📝 Обновления:', updates);
+
+    if (!userStore.user) {
+      error.value = 'Пользователь не авторизован';
+      console.error('❌ Пользователь не авторизован');
+      return;
+    }
+
+    // Проверяем права на редактирование
+    if (userStore.user.email !== 'lowdog136@gmail.com') {
+      error.value = 'У вас нет прав на редактирование элементов дорожной карты';
+      console.error('❌ Пользователь не имеет прав на редактирование:', userStore.user.email);
+      return;
+    }
+
+    console.log(
+      '✅ Пользователь авторизован и имеет права на редактирование:',
+      userStore.user.email,
+    );
+
     loading.value = true;
     error.value = null;
 
@@ -173,30 +232,80 @@ export const useRoadmapStore = defineStore('roadmap', () => {
         updateData.completedAt = new Date().toISOString();
       }
 
-      await updateDoc(doc(db, 'roadmap', id), updateData);
+      console.log('🔧 Подготовленные данные для обновления:', updateData);
+      console.log('🗄️ Попытка подключения к Firestore...');
 
-      const index = items.value.findIndex((item) => item.id === id);
-      if (index !== -1) {
-        const updatedItem = { ...items.value[index] };
-        Object.assign(updatedItem, updateData);
-        items.value[index] = updatedItem as RoadmapItem;
+      if (!db) {
+        throw new Error('Firestore не инициализирован');
       }
+
+      console.log('✅ Firestore подключен, обновляем документ...');
+
+      await updateDoc(doc(db, 'roadmap', id), updateData);
+      console.log('✅ Элемент обновлен в Firestore, локальное состояние обновится автоматически');
+
+      // Временное принудительное обновление локального состояния
+      const updatedItemIndex = items.value.findIndex((item) => item.id === id);
+      if (updatedItemIndex !== -1) {
+        console.log('🔄 Принудительно обновляем локальное состояние...');
+        const item = items.value[updatedItemIndex];
+        if (item) {
+          item.title = updateData.title;
+          item.description = updateData.description;
+          item.category = updateData.category;
+          item.priority = updateData.priority;
+          item.status = updateData.status;
+          item.estimatedEffort = updateData.estimatedEffort;
+          item.targetVersion = updateData.targetVersion;
+          item.notes = updateData.notes;
+          item.updatedAt = updateData.updatedAt;
+          if (updateData.completedAt) {
+            item.completedAt = updateData.completedAt;
+          }
+          console.log('✅ Локальное состояние обновлено принудительно');
+        }
+      } else {
+        console.log('⚠️ Элемент не найден в локальном состоянии для принудительного обновления');
+      }
+
+      // Не обновляем локальное состояние вручную - это сделает onSnapshot
     } catch (err) {
-      console.error('Ошибка при обновлении элемента:', err);
-      error.value = 'Ошибка при обновлении элемента';
+      console.error('❌ Ошибка при обновлении элемента:', err);
+      console.error('❌ Тип ошибки:', typeof err);
+      console.error(
+        '❌ Сообщение ошибки:',
+        err instanceof Error ? err.message : 'Неизвестная ошибка',
+      );
+      console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
+
+      error.value = `Ошибка при обновлении элемента: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
     } finally {
       loading.value = false;
+      console.log('=== Конец обновления элемента дорожной карты ===');
     }
   };
 
   // Удалить элемент
   const deleteItem = async (id: string) => {
+    if (!userStore.user) {
+      error.value = 'Пользователь не авторизован';
+      return;
+    }
+
+    // Проверяем права на редактирование
+    if (userStore.user.email !== 'lowdog136@gmail.com') {
+      error.value = 'У вас нет прав на удаление элементов дорожной карты';
+      return;
+    }
+
     loading.value = true;
     error.value = null;
 
     try {
       await deleteDoc(doc(db, 'roadmap', id));
-      items.value = items.value.filter((item) => item.id !== id);
+      console.log('✅ Элемент удален из Firestore, локальное состояние обновится автоматически');
+
+      // Не обновляем локальное состояние вручную - это сделает onSnapshot
     } catch (err) {
       console.error('Ошибка при удалении элемента:', err);
       error.value = 'Ошибка при удалении элемента';
@@ -218,12 +327,42 @@ export const useRoadmapStore = defineStore('roadmap', () => {
       category: 'feature' as const,
       priority: 'medium' as const,
       status: 'planned' as const,
-      estimatedEffort: 'small' as const,
-      targetVersion: '1.0.0',
-      notes: 'Тестовые заметки',
+      assignee: userStore.user.email!,
+      targetVersion: null,
+      notes: 'Тестовый элемент',
+      estimatedEffort: null,
     };
 
     return await addItem(testItem);
+  };
+
+  // Отладочная функция для проверки всех документов
+  const debugAllItems = async () => {
+    console.log('=== DEBUG: Проверка всех документов в коллекции roadmap ===');
+
+    try {
+      if (!db) {
+        throw new Error('Firestore не инициализирован');
+      }
+
+      const { collection, getDocs } = await import('firebase/firestore');
+
+      // Получаем все документы без фильтров
+      const querySnapshot = await getDocs(collection(db, 'roadmap'));
+
+      console.log('📊 Всего документов в коллекции roadmap:', querySnapshot.size);
+
+      querySnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        console.log('📄 Документ ID:', doc.id);
+        console.log('📄 Данные:', data);
+        console.log('📄 assignee:', data.assignee);
+        console.log('📄 Текущий пользователь:', userStore.user?.email);
+        console.log('---');
+      });
+    } catch (error) {
+      console.error('❌ Ошибка при отладке:', error);
+    }
   };
 
   // Создать примеры элементов дорожной карты
@@ -557,6 +696,58 @@ export const useRoadmapStore = defineStore('roadmap', () => {
     highPriority: highPriorityItems.value.length,
   }));
 
+  // Пагинация
+  const paginatedItems = computed(() => {
+    const startIndex = (currentPage.value - 1) * itemsPerPage.value;
+    const endIndex = startIndex + itemsPerPage.value;
+    return items.value.slice(startIndex, endIndex);
+  });
+
+  const hasNextPage = computed(() => currentPage.value < totalPages.value);
+  const hasPrevPage = computed(() => currentPage.value > 1);
+
+  // Методы пагинации
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages.value) {
+      currentPage.value = page;
+    }
+  };
+
+  const nextPage = () => {
+    if (hasNextPage.value) {
+      currentPage.value++;
+    }
+  };
+
+  const prevPage = () => {
+    if (hasPrevPage.value) {
+      currentPage.value--;
+    }
+  };
+
+  const goToFirstPage = () => {
+    currentPage.value = 1;
+  };
+
+  const goToLastPage = () => {
+    currentPage.value = totalPages.value;
+  };
+
+  // Метод для сброса состояния
+  const reset = () => {
+    // Отписываемся от слушателя, если он есть
+    if (unsubscribe) {
+      console.log('🔄 Отписываемся от слушателя при сбросе');
+      unsubscribe();
+      unsubscribe = null;
+    }
+
+    items.value = [];
+    loading.value = false;
+    error.value = null;
+    currentPage.value = 1; // Сбрасываем на первую страницу
+  };
+
   return {
     items,
     loading,
@@ -572,5 +763,19 @@ export const useRoadmapStore = defineStore('roadmap', () => {
     completedItems,
     highPriorityItems,
     stats,
+    debugAllItems,
+    reset,
+    // Пагинация
+    currentPage,
+    itemsPerPage,
+    totalPages,
+    paginatedItems,
+    hasNextPage,
+    hasPrevPage,
+    goToPage,
+    nextPage,
+    prevPage,
+    goToFirstPage,
+    goToLastPage,
   };
 });

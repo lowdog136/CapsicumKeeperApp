@@ -33,6 +33,8 @@
               outlined
               dense
               class="col"
+              emit-value
+              map-options
             />
 
             <q-select
@@ -42,6 +44,8 @@
               outlined
               dense
               class="col"
+              emit-value
+              map-options
             />
           </div>
 
@@ -53,6 +57,8 @@
               outlined
               dense
               class="col"
+              emit-value
+              map-options
             />
 
             <q-select
@@ -63,6 +69,8 @@
               dense
               class="col"
               clearable
+              emit-value
+              map-options
             />
           </div>
 
@@ -160,10 +168,10 @@ const effortOptions = [
 const form = ref({
   title: '',
   description: '',
-  category: 'feature' as const,
-  priority: 'medium' as const,
-  status: 'planned' as const,
-  estimatedEffort: undefined as 'small' | 'medium' | 'large' | undefined,
+  category: 'feature' as 'feature' | 'improvement' | 'bugfix' | 'ui' | 'backend',
+  priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+  status: 'planned' as 'planned' | 'in-progress' | 'completed' | 'cancelled',
+  estimatedEffort: null as 'small' | 'medium' | 'large' | null,
   targetVersion: '',
   notes: '',
 });
@@ -191,7 +199,7 @@ watch(
         category: 'feature',
         priority: 'medium',
         status: 'planned',
-        estimatedEffort: undefined,
+        estimatedEffort: null,
         targetVersion: '',
         notes: '',
       };
@@ -219,8 +227,8 @@ const onSubmit = async () => {
       priority: form.value.priority,
       status: form.value.status,
       estimatedEffort: form.value.estimatedEffort,
-      targetVersion: form.value.targetVersion || undefined,
-      notes: form.value.notes || undefined,
+      targetVersion: form.value.targetVersion || null,
+      notes: form.value.notes || null,
     };
 
     emit('save', itemData);
