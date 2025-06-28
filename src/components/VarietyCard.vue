@@ -44,14 +44,15 @@
       <div class="row items-center q-mb-sm">
         <span class="text-caption q-mr-sm">Цвета:</span>
         <div class="row q-gutter-xs">
-          <q-chip
+          <q-icon
             v-for="color in variety.color"
             :key="color"
-            size="xs"
-            :label="color"
-            color="grey-3"
-            text-color="dark"
-          />
+            name="fiber_manual_record"
+            :style="{ color: getColorHex(color), fontSize: '22px' }"
+            class="q-mr-xs"
+          >
+            <q-tooltip>{{ color }}</q-tooltip>
+          </q-icon>
         </div>
       </div>
 
@@ -134,11 +135,18 @@
               <h6>Характеристики</h6>
               <ul>
                 <li>
-                  <strong>Острота:</strong> {{ getHeatLevelInfo(variety.heatLevel).name }} ({{
-                    getHeatLevelInfo(variety.heatLevel).shuRange
-                  }})
+                  <strong>Острота:</strong> {{ getHeatLevelInfo(variety.heatLevel).name }} ({ {
+                  getHeatLevelInfo(variety.heatLevel).shuRange } })
                 </li>
-                <li><strong>Цвета:</strong> {{ variety.color.join(', ') }}</li>
+                <li>
+                  <strong>Цвета:</strong>
+                  <span v-for="color in variety.color" :key="color" class="q-mr-xs">
+                    <q-icon
+                      name="fiber_manual_record"
+                      :style="{ color: getColorHex(color), fontSize: '18px' }"
+                    />
+                  </span>
+                </li>
                 <li>
                   <strong>Высота:</strong> {{ variety.plantHeight.min }}-{{
                     variety.plantHeight.max
@@ -199,6 +207,32 @@ const showDetails = ref(false);
 
 const getHeatLevelInfo = store.getHeatLevelInfo;
 const getSpeciesInfo = store.getSpeciesInfo;
+
+const colorMap: Record<string, string> = {
+  красный: '#e53935',
+  желтый: '#fbc02d',
+  оранжевый: '#fb8c00',
+  зеленый: '#43a047',
+  фиолетовый: '#8e24aa',
+  шоколадный: '#6d4c41',
+  белый: '#fafafa',
+  черный: '#212121',
+  розовый: '#ec407a',
+  кремовый: '#fff8e1',
+  сиреневый: '#b39ddb',
+  синий: '#1e88e5',
+  коричневый: '#795548',
+  золотой: '#ffd600',
+  лимонный: '#fff176',
+  персиковый: '#ffb74d',
+  серый: '#bdbdbd',
+};
+
+function getColorHex(color: string): string {
+  // Привести к нижнему регистру и убрать пробелы
+  const key = color.trim().toLowerCase();
+  return colorMap[key] || key || '#bdbdbd';
+}
 
 const toggleFavorite = async () => {
   await store.toggleFavorite(props.variety.id);

@@ -184,9 +184,29 @@
       </div>
     </div>
 
-    <div v-else class="row q-col-gutter-md">
-      <div v-for="variety in filteredVarieties" :key="variety.id" class="col-12 col-md-6 col-lg-4">
-        <VarietyCard :variety="variety" @add-to-garden="addToGarden" />
+    <div v-else>
+      <div class="row q-col-gutter-md">
+        <div
+          v-for="variety in paginatedVarieties"
+          :key="variety.id"
+          class="col-12 col-md-6 col-lg-4"
+        >
+          <VarietyCard :variety="variety" @add-to-garden="addToGarden" />
+        </div>
+      </div>
+      <div class="row justify-center q-mt-lg">
+        <q-pagination
+          v-model="currentPage"
+          :max="totalPages"
+          :max-pages="6"
+          boundary-numbers
+          direction-links
+          color="primary"
+          size="lg"
+        />
+      </div>
+      <div class="text-center q-mt-md text-grey-6">
+        Показано {{ startIndex + 1 }}-{{ endIndex }} из {{ filteredVarieties.length }} сортов
       </div>
     </div>
 
@@ -264,7 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useVarietyLibraryStore } from 'src/stores/variety-library';
 import VarietyCard from 'src/components/VarietyCard.vue';
@@ -278,7 +298,9 @@ import type {
 const $q = useQuasar();
 const store = useVarietyLibraryStore();
 
-// Состояние
+const ITEMS_PER_PAGE = 12;
+const currentPage = ref(1);
+
 const searchTerm = ref('');
 const showAddDialog = ref(false);
 const filters = ref({
@@ -288,7 +310,6 @@ const filters = ref({
   onlyFavorites: false,
 });
 
-// Новый сорт
 const newVariety = ref({
   name: '',
   species: 'Capsicum annuum' as CapsicumSpecies,
@@ -297,10 +318,36 @@ const newVariety = ref({
   category: 'other' as PepperCategory,
 });
 
-// Computed свойства
 const filteredVarieties = computed(() => {
-  return store.searchVarieties(searchTerm.value, filters.value);
+  const searchFilters: {
+    heatLevel?: HeatLevel;
+    category?: PepperCategory;
+    species?: CapsicumSpecies;
+    onlyFavorites?: boolean;
+  } = {};
+  if (filters.value.heatLevel) searchFilters.heatLevel = filters.value.heatLevel;
+  if (filters.value.category) searchFilters.category = filters.value.category;
+  if (filters.value.species) searchFilters.species = filters.value.species;
+  if (filters.value.onlyFavorites) searchFilters.onlyFavorites = filters.value.onlyFavorites;
+  return store.searchVarieties(searchTerm.value, searchFilters);
 });
+
+const totalPages = computed(() => Math.ceil(filteredVarieties.value.length / ITEMS_PER_PAGE));
+const startIndex = computed(() => (currentPage.value - 1) * ITEMS_PER_PAGE);
+const endIndex = computed(() =>
+  Math.min(startIndex.value + ITEMS_PER_PAGE, filteredVarieties.value.length),
+);
+const paginatedVarieties = computed(() =>
+  filteredVarieties.value.slice(startIndex.value, endIndex.value),
+);
+
+watch(
+  [searchTerm, filters],
+  () => {
+    currentPage.value = 1;
+  },
+  { deep: true },
+);
 
 const speciesStats = computed(() => {
   const stats = {
@@ -334,7 +381,6 @@ const speciesStats = computed(() => {
   return stats;
 });
 
-// Методы
 const addToGarden = (variety: PepperVariety) => {
   $q.notify({
     color: 'positive',
@@ -485,7 +531,6 @@ const removeDuplicates = async () => {
   }
 };
 
-// Функция форматирования даты
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('ru-RU', {
     year: 'numeric',
@@ -496,7 +541,6 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Инициализация
 onMounted(async () => {
   await store.loadVarieties();
   store.loadLastCheckDate();
