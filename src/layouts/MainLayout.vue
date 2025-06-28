@@ -26,6 +26,10 @@
           <q-item-section avatar><q-icon name="add" /></q-item-section>
           <q-item-section>Добавить перец</q-item-section>
         </q-item>
+        <q-item clickable :to="{ path: '/varieties' }">
+          <q-item-section avatar><q-icon name="local_florist" /></q-item-section>
+          <q-item-section>Библиотека сортов</q-item-section>
+        </q-item>
         <q-item clickable :to="{ path: '/favorites' }">
           <q-item-section avatar><q-icon name="favorite" /></q-item-section>
           <q-item-section>Избранное</q-item-section>

@@ -69,3 +69,70 @@ export interface TreatmentEntry {
   agent: string;
   volume?: number;
 }
+
+// Библиотека сортов перцев
+export interface PepperVariety {
+  id: string;
+  name: string;
+  scientificName?: string;
+  description: string;
+  heatLevel: HeatLevel;
+  color: string[];
+  plantHeight: {
+    min: number;
+    max: number;
+    unit: 'cm' | 'inches';
+  };
+  daysToMaturity: {
+    min: number;
+    max: number;
+  };
+  fruitSize: {
+    length: {
+      min: number;
+      max: number;
+      unit: 'cm' | 'inches';
+    };
+    width: {
+      min: number;
+      max: number;
+      unit: 'cm' | 'inches';
+    };
+  };
+  growingTips: string[];
+  origin?: string;
+  category: PepperCategory;
+  imageUrl?: string;
+  isFavorite?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type HeatLevel =
+  | 'no-heat' // 0 SHU
+  | 'very-mild' // 100-500 SHU
+  | 'mild' // 500-2500 SHU
+  | 'medium' // 2500-8000 SHU
+  | 'hot' // 8000-50000 SHU
+  | 'very-hot' // 50000-100000 SHU
+  | 'extremely-hot'; // 100000+ SHU;
+
+export type PepperCategory =
+  | 'bell' // Болгарский
+  | 'jalapeno' // Халапеньо
+  | 'habanero' // Хабанеро
+  | 'cayenne' // Кайенский
+  | 'serrano' // Серрано
+  | 'anaheim' // Анахайм
+  | 'poblano' // Поблано
+  | 'ghost' // Призрак
+  | 'scotch-bonnet' // Шотландская шапочка
+  | 'other'; // Другие
+
+export interface HeatLevelInfo {
+  level: HeatLevel;
+  name: string;
+  shuRange: string;
+  description: string;
+  color: string;
+}
