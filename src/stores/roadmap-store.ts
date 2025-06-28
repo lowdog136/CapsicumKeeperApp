@@ -27,64 +27,106 @@ export const useRoadmapStore = defineStore('roadmap', () => {
 
   // Получить все элементы дорожной карты пользователя
   const fetchItems = async () => {
+    console.log('=== Начало загрузки элементов дорожной карты ===');
+
     if (!userStore.user) {
       error.value = 'Пользователь не авторизован';
+      console.error('❌ Пользователь не авторизован при загрузке');
       return;
     }
+
+    console.log('✅ Пользователь авторизован:', userStore.user.email);
 
     loading.value = true;
     error.value = null;
 
     try {
+      console.log('🗄️ Подключение к Firestore...');
+
+      if (!db) {
+        throw new Error('Firestore не инициализирован');
+      }
+
+      console.log('✅ Firestore подключен, создаем запрос...');
+
       const q = query(
         collection(db, 'roadmap'),
         where('assignee', '==', userStore.user.email),
         orderBy('createdAt', 'desc'),
       );
 
+      console.log('🔍 Выполняем запрос к коллекции roadmap...');
       const querySnapshot = await getDocs(q);
-      items.value = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as RoadmapItem[];
+
+      console.log('✅ Запрос выполнен, получено документов:', querySnapshot.size);
+
+      items.value = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        console.log('📄 Документ:', doc.id, '=>', data);
+        return {
+          id: doc.id,
+          ...data,
+        };
+      }) as RoadmapItem[];
+
+      console.log('✅ Элементы загружены в локальное состояние:', items.value.length);
     } catch (err) {
-      console.error('Ошибка при загрузке дорожной карты:', err);
-      error.value = 'Ошибка при загрузке дорожной карты';
+      console.error('❌ Ошибка при загрузке дорожной карты:', err);
+      console.error('❌ Тип ошибки:', typeof err);
+      console.error(
+        '❌ Сообщение ошибки:',
+        err instanceof Error ? err.message : 'Неизвестная ошибка',
+      );
+      console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
+
+      error.value = `Ошибка при загрузке дорожной карты: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
     } finally {
       loading.value = false;
+      console.log('=== Конец загрузки элементов дорожной карты ===');
     }
   };
 
   // Добавить новый элемент
   const addItem = async (item: Omit<RoadmapItem, 'id' | 'createdAt' | 'updatedAt'>) => {
+    console.log('=== Начало добавления элемента дорожной карты ===');
+
     if (!userStore.user) {
       error.value = 'Пользователь не авторизован';
-      console.error('Пользователь не авторизован');
+      console.error('❌ Пользователь не авторизован');
       return null;
     }
+
+    console.log('✅ Пользователь авторизован:', userStore.user.email);
+    console.log('📝 Исходный элемент:', item);
 
     loading.value = true;
     error.value = null;
 
     try {
-      console.log('Добавление элемента дорожной карты:', item);
-      console.log('Пользователь:', userStore.user.email);
-
       const now = new Date().toISOString();
       const newItem = {
         ...item,
         assignee: userStore.user.email!,
         createdAt: now,
         updatedAt: now,
+        // Убираем undefined значения
         targetVersion: item.targetVersion || null,
         notes: item.notes || null,
         estimatedEffort: item.estimatedEffort || null,
       };
 
-      console.log('Подготовленный элемент:', newItem);
+      console.log('🔧 Подготовленный элемент для Firestore:', newItem);
+      console.log('🗄️ Попытка подключения к Firestore...');
+
+      // Проверяем подключение к Firestore
+      if (!db) {
+        throw new Error('Firestore не инициализирован');
+      }
+
+      console.log('✅ Firestore подключен, добавляем документ...');
 
       const docRef = await addDoc(collection(db, 'roadmap'), newItem);
-      console.log('Элемент добавлен с ID:', docRef.id);
+      console.log('✅ Элемент добавлен с ID:', docRef.id);
 
       const createdItem: RoadmapItem = {
         id: docRef.id,
@@ -92,15 +134,24 @@ export const useRoadmapStore = defineStore('roadmap', () => {
       };
 
       items.value.unshift(createdItem);
-      console.log('Элемент добавлен в локальное состояние');
+      console.log('✅ Элемент добавлен в локальное состояние');
+      console.log('📊 Всего элементов в локальном состоянии:', items.value.length);
 
       return createdItem;
     } catch (err) {
-      console.error('Ошибка при добавлении элемента:', err);
-      error.value = 'Ошибка при добавлении элемента';
+      console.error('❌ Ошибка при добавлении элемента:', err);
+      console.error('❌ Тип ошибки:', typeof err);
+      console.error(
+        '❌ Сообщение ошибки:',
+        err instanceof Error ? err.message : 'Неизвестная ошибка',
+      );
+      console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
+
+      error.value = `Ошибка при добавлении элемента: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
       return null;
     } finally {
       loading.value = false;
+      console.log('=== Конец добавления элемента дорожной карты ===');
     }
   };
 
