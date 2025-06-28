@@ -15,6 +15,14 @@
           :loading="loading"
         />
         <q-btn
+          v-if="userStore.user"
+          color="orange"
+          icon="bug_report"
+          label="Тестовый элемент"
+          @click="createTestItem"
+          :loading="loading"
+        />
+        <q-btn
           color="primary"
           icon="add"
           label="Добавить элемент"
@@ -277,6 +285,22 @@ const createSamples = async () => {
     $q.notify({
       type: 'negative',
       message: 'Ошибка при создании примеров',
+    });
+  }
+};
+
+const createTestItem = async () => {
+  try {
+    await roadmapStore.createTestItem();
+    $q.notify({
+      type: 'positive',
+      message: 'Тестовый элемент создан',
+    });
+  } catch (error) {
+    console.error('Ошибка при создании тестового элемента:', error);
+    $q.notify({
+      type: 'negative',
+      message: 'Ошибка при создании тестового элемента',
     });
   }
 };

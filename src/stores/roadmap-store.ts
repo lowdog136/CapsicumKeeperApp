@@ -59,6 +59,7 @@ export const useRoadmapStore = defineStore('roadmap', () => {
   const addItem = async (item: Omit<RoadmapItem, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!userStore.user) {
       error.value = 'Пользователь не авторизован';
+      console.error('Пользователь не авторизован');
       return null;
     }
 
@@ -66,6 +67,9 @@ export const useRoadmapStore = defineStore('roadmap', () => {
     error.value = null;
 
     try {
+      console.log('Добавление элемента дорожной карты:', item);
+      console.log('Пользователь:', userStore.user.email);
+
       const now = new Date().toISOString();
       const newItem = {
         ...item,
@@ -74,13 +78,19 @@ export const useRoadmapStore = defineStore('roadmap', () => {
         updatedAt: now,
       };
 
+      console.log('Подготовленный элемент:', newItem);
+
       const docRef = await addDoc(collection(db, 'roadmap'), newItem);
+      console.log('Элемент добавлен с ID:', docRef.id);
+
       const createdItem: RoadmapItem = {
         id: docRef.id,
         ...newItem,
       };
 
       items.value.unshift(createdItem);
+      console.log('Элемент добавлен в локальное состояние');
+
       return createdItem;
     } catch (err) {
       console.error('Ошибка при добавлении элемента:', err);
@@ -136,6 +146,27 @@ export const useRoadmapStore = defineStore('roadmap', () => {
     } finally {
       loading.value = false;
     }
+  };
+
+  // Создать один тестовый элемент
+  const createTestItem = async () => {
+    if (!userStore.user) {
+      error.value = 'Пользователь не авторизован';
+      return null;
+    }
+
+    const testItem = {
+      title: 'Тестовый элемент дорожной карты',
+      description: 'Это тестовый элемент для проверки работы дорожной карты',
+      category: 'feature' as const,
+      priority: 'medium' as const,
+      status: 'planned' as const,
+      estimatedEffort: 'small' as const,
+      targetVersion: '1.0.0',
+      notes: 'Тестовые заметки',
+    };
+
+    return await addItem(testItem);
   };
 
   // Создать примеры элементов дорожной карты
@@ -477,6 +508,7 @@ export const useRoadmapStore = defineStore('roadmap', () => {
     addItem,
     updateItem,
     deleteItem,
+    createTestItem,
     createSampleItems,
     plannedItems,
     inProgressItems,
