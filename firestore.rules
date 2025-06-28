@@ -20,6 +20,15 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
+    // Правила для дорожной карты
+    match /roadmap/{itemId} {
+      // Все могут читать элементы дорожной карты (публичная дорожная карта)
+      allow read: if true;
+      
+      // Только пользователь lowdog136@gmail.com может создавать, обновлять и удалять элементы
+      allow create, update, delete: if request.auth != null && request.auth.token.email == "lowdog136@gmail.com";
+    }
+    
     // Правила для пользователей
     match /users/{userId} {
       // Пользователи могут читать и обновлять только свой профиль
