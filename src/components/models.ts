@@ -15,6 +15,7 @@ export interface Observation {
 
 export interface Pepper {
   id: string;
+  userId: string; // ID пользователя, которому принадлежит перец
   name: string;
   variety: string;
   photoUrl: string;
@@ -73,6 +74,8 @@ export interface Pepper {
     };
     growingTips: string[];
   };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface FertilizerComposition {

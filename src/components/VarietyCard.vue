@@ -1,7 +1,7 @@
 <template>
   <q-card class="variety-card" flat bordered>
     <q-img v-if="variety.imageUrl" :src="variety.imageUrl" height="200px" fit="cover">
-      <div class="absolute-top-right q-pa-sm">
+      <div class="absolute-top-right q-pa-sm" v-if="userStore.user">
         <q-btn
           :icon="variety.isFavorite ? 'favorite' : 'favorite_border'"
           :color="variety.isFavorite ? 'red' : 'grey'"
@@ -100,7 +100,13 @@
 
     <q-card-actions align="right">
       <q-btn flat color="primary" label="Подробнее" @click="showDetails = true" />
-      <q-btn flat color="secondary" label="Добавить в сад" @click="addToGarden" />
+      <q-btn
+        v-if="userStore.user"
+        flat
+        color="secondary"
+        label="Добавить в сад"
+        @click="addToGarden"
+      />
     </q-card-actions>
 
     <!-- Диалог с подробностями -->
@@ -182,7 +188,13 @@
 
         <q-card-actions align="right">
           <q-btn flat label="Закрыть" color="primary" v-close-popup />
-          <q-btn unelevated label="Добавить в сад" color="primary" @click="addToGarden" />
+          <q-btn
+            v-if="userStore.user"
+            unelevated
+            label="Добавить в сад"
+            color="primary"
+            @click="addToGarden"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -192,6 +204,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useVarietyLibraryStore } from 'src/stores/variety-library';
+import { useUserStore } from 'src/stores/user-store';
 import type { PepperVariety } from 'src/components/models';
 
 const props = defineProps<{
@@ -199,10 +212,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'addToGarden', variety: PepperVariety): void;
+  addToGarden: [variety: PepperVariety];
 }>();
 
 const store = useVarietyLibraryStore();
+const userStore = useUserStore();
 const showDetails = ref(false);
 
 const getHeatLevelInfo = store.getHeatLevelInfo;
