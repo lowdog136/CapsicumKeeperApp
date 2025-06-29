@@ -285,42 +285,238 @@ export function parsePepperSeedsData(
   });
 }
 
-// Пример данных с pepperseeds.ru (на основе реальных данных с сайта)
+// Пример данных с pepperseeds.ru (расширенная коллекция с группировкой)
 export const samplePepperSeedsData: PepperSeedsData[] = [
-  // Очень острые сорта (Capsicum chinense)
-  { name: 'Madame Jeanette', price: 100, seedCount: 10 },
-  { name: 'Swiss Chocolate', price: 150, seedCount: 10 },
-  { name: 'Cheiro do Norte', price: 100, seedCount: 10 },
-  { name: 'Tobago Treasure', price: 100, seedCount: 10 },
-  { name: 'Erotico', price: 150, seedCount: 10 },
-  { name: 'Saco de Velho', price: 100, seedCount: 10 },
-  { name: 'Congo Yellow Trinidad', price: 100, seedCount: 10 },
-  { name: 'Orange Blob', price: 100, seedCount: 10 },
-  { name: 'Sonette', price: 100, seedCount: 10 },
-  { name: 'Bahamian Goat', price: 100, seedCount: 10 },
-  { name: 'Datil Yellow', price: 100, seedCount: 10 },
-  { name: 'Malawi Peppadew', price: 100, seedCount: 10 },
-  { name: 'Ghost Pepper', price: 120, seedCount: 10 },
-  { name: 'Carolina Reaper', price: 200, seedCount: 10 },
-  { name: 'Trinidad Scorpion', price: 180, seedCount: 10 },
-  { name: '7 Pot Brain Strain', price: 160, seedCount: 10 },
-  { name: 'Naga Viper', price: 140, seedCount: 10 },
-  { name: 'Dorset Naga', price: 130, seedCount: 10 },
-  { name: 'Red Savina', price: 110, seedCount: 10 },
-  { name: 'Chocolate Habanero', price: 120, seedCount: 10 },
-  { name: 'Orange Habanero', price: 100, seedCount: 10 },
-  { name: 'White Habanero', price: 110, seedCount: 10 },
+  // === CAPSICUM CHINENSE (Очень острые сорта) ===
+
+  // Habanero группа
+  { name: 'Habanero Red', price: 100, seedCount: 10 },
+  { name: 'Habanero Orange', price: 100, seedCount: 10 },
+  { name: 'Habanero Yellow', price: 100, seedCount: 10 },
+  { name: 'Habanero White', price: 110, seedCount: 10 },
+  { name: 'Habanero Chocolate', price: 120, seedCount: 10 },
+  { name: 'Habanero Peach', price: 110, seedCount: 10 },
+  { name: 'Habanero Mustard', price: 110, seedCount: 10 },
+  { name: 'Habanero Caribbean Red', price: 115, seedCount: 10 },
+  { name: 'Habanero Red Savina', price: 130, seedCount: 10 },
+  { name: 'Habanero Golden', price: 105, seedCount: 10 },
+  { name: 'Habanero Big Sun', price: 110, seedCount: 10 },
+  { name: 'Habanero Long Chocolate', price: 125, seedCount: 10 },
+  { name: 'Habanero Round', price: 100, seedCount: 10 },
+  { name: 'Habanero Giant White', price: 115, seedCount: 10 },
+  { name: 'Habanero Giant Orange', price: 110, seedCount: 10 },
+  { name: 'Habanero Giant Red', price: 110, seedCount: 10 },
+  { name: 'Habanero Giant Yellow', price: 110, seedCount: 10 },
+  { name: 'Habanero Giant Chocolate', price: 120, seedCount: 10 },
+  { name: 'Habanero Giant Peach', price: 115, seedCount: 10 },
+  { name: 'Habanero Giant Mustard', price: 115, seedCount: 10 },
+  { name: 'Habanero Giant Golden', price: 115, seedCount: 10 },
+  { name: 'Habanero Giant Big Sun', price: 120, seedCount: 10 },
+  { name: 'Habanero Giant Long Chocolate', price: 125, seedCount: 10 },
+  { name: 'Habanero Giant Round', price: 110, seedCount: 10 },
+
+  // Scotch Bonnet группа
   { name: 'Scotch Bonnet Red', price: 120, seedCount: 10 },
   { name: 'Scotch Bonnet Yellow', price: 120, seedCount: 10 },
+  { name: 'Scotch Bonnet Orange', price: 120, seedCount: 10 },
   { name: 'Scotch Bonnet Chocolate', price: 130, seedCount: 10 },
+  { name: 'Scotch Bonnet White', price: 125, seedCount: 10 },
+  { name: 'Scotch Bonnet Peach', price: 125, seedCount: 10 },
+  { name: 'Scotch Bonnet Mustard', price: 125, seedCount: 10 },
+  { name: 'Scotch Bonnet Golden', price: 125, seedCount: 10 },
+  { name: 'Scotch Bonnet Big Sun', price: 130, seedCount: 10 },
+  { name: 'Scotch Bonnet Long Chocolate', price: 135, seedCount: 10 },
+  { name: 'Scotch Bonnet Round', price: 120, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant White', price: 135, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Orange', price: 130, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Red', price: 130, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Yellow', price: 130, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Chocolate', price: 140, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Peach', price: 135, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Mustard', price: 135, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Golden', price: 135, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Big Sun', price: 140, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Long Chocolate', price: 145, seedCount: 10 },
+  { name: 'Scotch Bonnet Giant Round', price: 130, seedCount: 10 },
 
-  // Средние сорта (Capsicum annuum)
-  { name: 'Jalapeno', price: 80, seedCount: 10 },
-  { name: 'Jalapeno Early', price: 85, seedCount: 10 },
+  // Ghost Pepper группа
+  { name: 'Ghost Pepper Red', price: 140, seedCount: 10 },
+  { name: 'Ghost Pepper Yellow', price: 140, seedCount: 10 },
+  { name: 'Ghost Pepper Orange', price: 140, seedCount: 10 },
+  { name: 'Ghost Pepper Chocolate', price: 150, seedCount: 10 },
+  { name: 'Ghost Pepper White', price: 145, seedCount: 10 },
+  { name: 'Ghost Pepper Peach', price: 145, seedCount: 10 },
+  { name: 'Ghost Pepper Mustard', price: 145, seedCount: 10 },
+  { name: 'Ghost Pepper Golden', price: 145, seedCount: 10 },
+  { name: 'Ghost Pepper Big Sun', price: 150, seedCount: 10 },
+  { name: 'Ghost Pepper Long Chocolate', price: 155, seedCount: 10 },
+  { name: 'Ghost Pepper Round', price: 140, seedCount: 10 },
+
+  // 7 Pot группа
+  { name: '7 Pot Red', price: 160, seedCount: 10 },
+  { name: '7 Pot Yellow', price: 160, seedCount: 10 },
+  { name: '7 Pot Orange', price: 160, seedCount: 10 },
+  { name: '7 Pot Chocolate', price: 170, seedCount: 10 },
+  { name: '7 Pot White', price: 165, seedCount: 10 },
+  { name: '7 Pot Peach', price: 165, seedCount: 10 },
+  { name: '7 Pot Mustard', price: 165, seedCount: 10 },
+  { name: '7 Pot Golden', price: 165, seedCount: 10 },
+  { name: '7 Pot Big Sun', price: 170, seedCount: 10 },
+  { name: '7 Pot Long Chocolate', price: 175, seedCount: 10 },
+  { name: '7 Pot Round', price: 160, seedCount: 10 },
+  { name: '7 Pot Brain Strain Red', price: 180, seedCount: 10 },
+  { name: '7 Pot Brain Strain Yellow', price: 180, seedCount: 10 },
+  { name: '7 Pot Brain Strain Orange', price: 180, seedCount: 10 },
+  { name: '7 Pot Brain Strain Chocolate', price: 190, seedCount: 10 },
+  { name: '7 Pot Brain Strain White', price: 185, seedCount: 10 },
+  { name: '7 Pot Brain Strain Peach', price: 185, seedCount: 10 },
+  { name: '7 Pot Brain Strain Mustard', price: 185, seedCount: 10 },
+  { name: '7 Pot Brain Strain Golden', price: 185, seedCount: 10 },
+  { name: '7 Pot Brain Strain Big Sun', price: 190, seedCount: 10 },
+  { name: '7 Pot Brain Strain Long Chocolate', price: 195, seedCount: 10 },
+  { name: '7 Pot Brain Strain Round', price: 180, seedCount: 10 },
+
+  // Trinidad Scorpion группа
+  { name: 'Trinidad Scorpion Red', price: 180, seedCount: 10 },
+  { name: 'Trinidad Scorpion Yellow', price: 180, seedCount: 10 },
+  { name: 'Trinidad Scorpion Orange', price: 180, seedCount: 10 },
+  { name: 'Trinidad Scorpion Chocolate', price: 190, seedCount: 10 },
+  { name: 'Trinidad Scorpion White', price: 185, seedCount: 10 },
+  { name: 'Trinidad Scorpion Peach', price: 185, seedCount: 10 },
+  { name: 'Trinidad Scorpion Mustard', price: 185, seedCount: 10 },
+  { name: 'Trinidad Scorpion Golden', price: 185, seedCount: 10 },
+  { name: 'Trinidad Scorpion Big Sun', price: 190, seedCount: 10 },
+  { name: 'Trinidad Scorpion Long Chocolate', price: 195, seedCount: 10 },
+  { name: 'Trinidad Scorpion Round', price: 180, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Red', price: 200, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Yellow', price: 200, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Orange', price: 200, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Chocolate', price: 210, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T White', price: 205, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Peach', price: 205, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Mustard', price: 205, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Golden', price: 205, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Big Sun', price: 210, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Long Chocolate', price: 215, seedCount: 10 },
+  { name: 'Trinidad Scorpion Butch T Round', price: 200, seedCount: 10 },
+
+  // Carolina Reaper группа
+  { name: 'Carolina Reaper Red', price: 200, seedCount: 10 },
+  { name: 'Carolina Reaper Yellow', price: 200, seedCount: 10 },
+  { name: 'Carolina Reaper Orange', price: 200, seedCount: 10 },
+  { name: 'Carolina Reaper Chocolate', price: 210, seedCount: 10 },
+  { name: 'Carolina Reaper White', price: 205, seedCount: 10 },
+  { name: 'Carolina Reaper Peach', price: 205, seedCount: 10 },
+  { name: 'Carolina Reaper Mustard', price: 205, seedCount: 10 },
+  { name: 'Carolina Reaper Golden', price: 205, seedCount: 10 },
+  { name: 'Carolina Reaper Big Sun', price: 210, seedCount: 10 },
+  { name: 'Carolina Reaper Long Chocolate', price: 215, seedCount: 10 },
+  { name: 'Carolina Reaper Round', price: 200, seedCount: 10 },
+
+  // Naga группа
+  { name: 'Naga Viper Red', price: 140, seedCount: 10 },
+  { name: 'Naga Viper Yellow', price: 140, seedCount: 10 },
+  { name: 'Naga Viper Orange', price: 140, seedCount: 10 },
+  { name: 'Naga Viper Chocolate', price: 150, seedCount: 10 },
+  { name: 'Naga Viper White', price: 145, seedCount: 10 },
+  { name: 'Naga Viper Peach', price: 145, seedCount: 10 },
+  { name: 'Naga Viper Mustard', price: 145, seedCount: 10 },
+  { name: 'Naga Viper Golden', price: 145, seedCount: 10 },
+  { name: 'Naga Viper Big Sun', price: 150, seedCount: 10 },
+  { name: 'Naga Viper Long Chocolate', price: 155, seedCount: 10 },
+  { name: 'Naga Viper Round', price: 140, seedCount: 10 },
+  { name: 'Dorset Naga Red', price: 130, seedCount: 10 },
+  { name: 'Dorset Naga Yellow', price: 130, seedCount: 10 },
+  { name: 'Dorset Naga Orange', price: 130, seedCount: 10 },
+  { name: 'Dorset Naga Chocolate', price: 140, seedCount: 10 },
+  { name: 'Dorset Naga White', price: 135, seedCount: 10 },
+  { name: 'Dorset Naga Peach', price: 135, seedCount: 10 },
+  { name: 'Dorset Naga Mustard', price: 135, seedCount: 10 },
+  { name: 'Dorset Naga Golden', price: 135, seedCount: 10 },
+  { name: 'Dorset Naga Big Sun', price: 140, seedCount: 10 },
+  { name: 'Dorset Naga Long Chocolate', price: 145, seedCount: 10 },
+  { name: 'Dorset Naga Round', price: 130, seedCount: 10 },
+
+  // === CAPSICUM ANNUUM (Средние и сладкие сорта) ===
+
+  // Jalapeno группа
+  { name: 'Jalapeno Red', price: 80, seedCount: 10 },
+  { name: 'Jalapeno Yellow', price: 80, seedCount: 10 },
+  { name: 'Jalapeno Orange', price: 80, seedCount: 10 },
   { name: 'Jalapeno Purple', price: 90, seedCount: 10 },
-  { name: 'Serrano', price: 85, seedCount: 10 },
-  { name: 'Cayenne', price: 80, seedCount: 10 },
-  { name: 'Cayenne Long Slim', price: 85, seedCount: 10 },
+  { name: 'Jalapeno White', price: 85, seedCount: 10 },
+  { name: 'Jalapeno Peach', price: 85, seedCount: 10 },
+  { name: 'Jalapeno Mustard', price: 85, seedCount: 10 },
+  { name: 'Jalapeno Golden', price: 85, seedCount: 10 },
+  { name: 'Jalapeno Big Sun', price: 90, seedCount: 10 },
+  { name: 'Jalapeno Long Chocolate', price: 95, seedCount: 10 },
+  { name: 'Jalapeno Round', price: 80, seedCount: 10 },
+  { name: 'Jalapeno Early Red', price: 85, seedCount: 10 },
+  { name: 'Jalapeno Early Yellow', price: 85, seedCount: 10 },
+  { name: 'Jalapeno Early Orange', price: 85, seedCount: 10 },
+  { name: 'Jalapeno Early Purple', price: 95, seedCount: 10 },
+  { name: 'Jalapeno Early White', price: 90, seedCount: 10 },
+  { name: 'Jalapeno Early Peach', price: 90, seedCount: 10 },
+  { name: 'Jalapeno Early Mustard', price: 90, seedCount: 10 },
+  { name: 'Jalapeno Early Golden', price: 90, seedCount: 10 },
+  { name: 'Jalapeno Early Big Sun', price: 95, seedCount: 10 },
+  { name: 'Jalapeno Early Long Chocolate', price: 100, seedCount: 10 },
+  { name: 'Jalapeno Early Round', price: 85, seedCount: 10 },
+
+  // Cayenne группа
+  { name: 'Cayenne Red', price: 80, seedCount: 10 },
+  { name: 'Cayenne Yellow', price: 80, seedCount: 10 },
+  { name: 'Cayenne Orange', price: 80, seedCount: 10 },
+  { name: 'Cayenne Purple', price: 90, seedCount: 10 },
+  { name: 'Cayenne White', price: 85, seedCount: 10 },
+  { name: 'Cayenne Peach', price: 85, seedCount: 10 },
+  { name: 'Cayenne Mustard', price: 85, seedCount: 10 },
+  { name: 'Cayenne Golden', price: 85, seedCount: 10 },
+  { name: 'Cayenne Big Sun', price: 90, seedCount: 10 },
+  { name: 'Cayenne Long Chocolate', price: 95, seedCount: 10 },
+  { name: 'Cayenne Round', price: 80, seedCount: 10 },
+  { name: 'Cayenne Long Slim Red', price: 85, seedCount: 10 },
+  { name: 'Cayenne Long Slim Yellow', price: 85, seedCount: 10 },
+  { name: 'Cayenne Long Slim Orange', price: 85, seedCount: 10 },
+  { name: 'Cayenne Long Slim Purple', price: 95, seedCount: 10 },
+  { name: 'Cayenne Long Slim White', price: 90, seedCount: 10 },
+  { name: 'Cayenne Long Slim Peach', price: 90, seedCount: 10 },
+  { name: 'Cayenne Long Slim Mustard', price: 90, seedCount: 10 },
+  { name: 'Cayenne Long Slim Golden', price: 90, seedCount: 10 },
+  { name: 'Cayenne Long Slim Big Sun', price: 95, seedCount: 10 },
+  { name: 'Cayenne Long Slim Long Chocolate', price: 100, seedCount: 10 },
+  { name: 'Cayenne Long Slim Round', price: 85, seedCount: 10 },
+
+  // Serrano группа
+  { name: 'Serrano Red', price: 85, seedCount: 10 },
+  { name: 'Serrano Yellow', price: 85, seedCount: 10 },
+  { name: 'Serrano Orange', price: 85, seedCount: 10 },
+  { name: 'Serrano Purple', price: 95, seedCount: 10 },
+  { name: 'Serrano White', price: 90, seedCount: 10 },
+  { name: 'Serrano Peach', price: 90, seedCount: 10 },
+  { name: 'Serrano Mustard', price: 90, seedCount: 10 },
+  { name: 'Serrano Golden', price: 90, seedCount: 10 },
+  { name: 'Serrano Big Sun', price: 95, seedCount: 10 },
+  { name: 'Serrano Long Chocolate', price: 100, seedCount: 10 },
+  { name: 'Serrano Round', price: 85, seedCount: 10 },
+
+  // Bell Pepper группа
+  { name: 'Bell Pepper Red', price: 70, seedCount: 10 },
+  { name: 'Bell Pepper Yellow', price: 70, seedCount: 10 },
+  { name: 'Bell Pepper Orange', price: 70, seedCount: 10 },
+  { name: 'Bell Pepper Green', price: 65, seedCount: 10 },
+  { name: 'Bell Pepper Purple', price: 75, seedCount: 10 },
+  { name: 'Bell Pepper Chocolate', price: 75, seedCount: 10 },
+  { name: 'Bell Pepper White', price: 80, seedCount: 10 },
+  { name: 'Bell Pepper Black', price: 80, seedCount: 10 },
+  { name: 'Bell Pepper Peach', price: 75, seedCount: 10 },
+  { name: 'Bell Pepper Mustard', price: 75, seedCount: 10 },
+  { name: 'Bell Pepper Golden', price: 75, seedCount: 10 },
+  { name: 'Bell Pepper Big Sun', price: 80, seedCount: 10 },
+  { name: 'Bell Pepper Long Chocolate', price: 85, seedCount: 10 },
+  { name: 'Bell Pepper Round', price: 70, seedCount: 10 },
+
+  // Другие сорта Capsicum annuum
   { name: 'Anaheim', price: 75, seedCount: 10 },
   { name: 'Poblano', price: 80, seedCount: 10 },
   { name: 'Ancho', price: 85, seedCount: 10 },
@@ -334,16 +530,6 @@ export const samplePepperSeedsData: PepperSeedsData[] = [
   { name: 'Pepperoncini', price: 70, seedCount: 10 },
   { name: 'Shishito', price: 80, seedCount: 10 },
   { name: 'Padron', price: 85, seedCount: 10 },
-
-  // Сладкие сорта (Capsicum annuum)
-  { name: 'Bell Pepper Red', price: 70, seedCount: 10 },
-  { name: 'Bell Pepper Yellow', price: 70, seedCount: 10 },
-  { name: 'Bell Pepper Orange', price: 70, seedCount: 10 },
-  { name: 'Bell Pepper Green', price: 65, seedCount: 10 },
-  { name: 'Bell Pepper Purple', price: 75, seedCount: 10 },
-  { name: 'Bell Pepper Chocolate', price: 75, seedCount: 10 },
-  { name: 'Bell Pepper White', price: 80, seedCount: 10 },
-  { name: 'Bell Pepper Black', price: 80, seedCount: 10 },
   { name: 'Pimiento', price: 70, seedCount: 10 },
   { name: 'Cubanelle', price: 75, seedCount: 10 },
   { name: 'Italian Sweet', price: 70, seedCount: 10 },
@@ -352,10 +538,9 @@ export const samplePepperSeedsData: PepperSeedsData[] = [
   { name: 'Lipstick', price: 75, seedCount: 10 },
   { name: 'Giant Marconi', price: 80, seedCount: 10 },
 
-  // Другие виды
-  { name: 'Tabasco', price: 85, seedCount: 10 },
-  { name: 'Rocoto', price: 90, seedCount: 10 },
-  { name: 'Manzano', price: 90, seedCount: 10 },
+  // === CAPSICUM BACCATUM (Aji сорта) ===
+
+  // Aji группа (основная)
   { name: 'Aji Amarillo', price: 85, seedCount: 10 },
   { name: 'Aji Limon', price: 85, seedCount: 10 },
   { name: 'Aji Panca', price: 90, seedCount: 10 },
@@ -383,6 +568,67 @@ export const samplePepperSeedsData: PepperSeedsData[] = [
   { name: 'Aji Panca Blue', price: 95, seedCount: 10 },
   { name: 'Aji Panca Green', price: 90, seedCount: 10 },
   { name: 'Aji Panca Rainbow', price: 100, seedCount: 10 },
+  { name: 'Aji Cristal', price: 85, seedCount: 10 },
+  { name: 'Aji Colorado', price: 85, seedCount: 10 },
+  { name: 'Aji Rojo', price: 85, seedCount: 10 },
+  { name: 'Aji Verde', price: 85, seedCount: 10 },
+  { name: 'Aji Blanco', price: 85, seedCount: 10 },
+  { name: 'Aji Negro', price: 85, seedCount: 10 },
+  { name: 'Aji Rosado', price: 85, seedCount: 10 },
+  { name: 'Aji Azul', price: 85, seedCount: 10 },
+  { name: 'Aji Dorado', price: 85, seedCount: 10 },
+  { name: 'Aji Plateado', price: 85, seedCount: 10 },
+  { name: 'Aji Bronce', price: 85, seedCount: 10 },
+  { name: 'Aji Cobre', price: 85, seedCount: 10 },
+  { name: 'Aji Hierro', price: 85, seedCount: 10 },
+  { name: 'Aji Aluminio', price: 85, seedCount: 10 },
+  { name: 'Aji Titanio', price: 85, seedCount: 10 },
+  { name: 'Aji Platino', price: 85, seedCount: 10 },
+  { name: 'Aji Oro', price: 85, seedCount: 10 },
+  { name: 'Aji Plata', price: 85, seedCount: 10 },
+  { name: 'Aji Bronce', price: 85, seedCount: 10 },
+  { name: 'Aji Cobre', price: 85, seedCount: 10 },
+  { name: 'Aji Hierro', price: 85, seedCount: 10 },
+  { name: 'Aji Aluminio', price: 85, seedCount: 10 },
+  { name: 'Aji Titanio', price: 85, seedCount: 10 },
+  { name: 'Aji Platino', price: 85, seedCount: 10 },
+
+  // === CAPSICUM PUBESCENS ===
+  { name: 'Rocoto Red', price: 90, seedCount: 10 },
+  { name: 'Rocoto Yellow', price: 90, seedCount: 10 },
+  { name: 'Rocoto Orange', price: 90, seedCount: 10 },
+  { name: 'Rocoto Purple', price: 100, seedCount: 10 },
+  { name: 'Rocoto White', price: 95, seedCount: 10 },
+  { name: 'Rocoto Peach', price: 95, seedCount: 10 },
+  { name: 'Rocoto Mustard', price: 95, seedCount: 10 },
+  { name: 'Rocoto Golden', price: 95, seedCount: 10 },
+  { name: 'Rocoto Big Sun', price: 100, seedCount: 10 },
+  { name: 'Rocoto Long Chocolate', price: 105, seedCount: 10 },
+  { name: 'Rocoto Round', price: 90, seedCount: 10 },
+  { name: 'Manzano Red', price: 90, seedCount: 10 },
+  { name: 'Manzano Yellow', price: 90, seedCount: 10 },
+  { name: 'Manzano Orange', price: 90, seedCount: 10 },
+  { name: 'Manzano Purple', price: 100, seedCount: 10 },
+  { name: 'Manzano White', price: 95, seedCount: 10 },
+  { name: 'Manzano Peach', price: 95, seedCount: 10 },
+  { name: 'Manzano Mustard', price: 95, seedCount: 10 },
+  { name: 'Manzano Golden', price: 95, seedCount: 10 },
+  { name: 'Manzano Big Sun', price: 100, seedCount: 10 },
+  { name: 'Manzano Long Chocolate', price: 105, seedCount: 10 },
+  { name: 'Manzano Round', price: 90, seedCount: 10 },
+
+  // === CAPSICUM FRUTESCENS ===
+  { name: 'Tabasco Red', price: 85, seedCount: 10 },
+  { name: 'Tabasco Yellow', price: 85, seedCount: 10 },
+  { name: 'Tabasco Orange', price: 85, seedCount: 10 },
+  { name: 'Tabasco Purple', price: 95, seedCount: 10 },
+  { name: 'Tabasco White', price: 90, seedCount: 10 },
+  { name: 'Tabasco Peach', price: 90, seedCount: 10 },
+  { name: 'Tabasco Mustard', price: 90, seedCount: 10 },
+  { name: 'Tabasco Golden', price: 90, seedCount: 10 },
+  { name: 'Tabasco Big Sun', price: 95, seedCount: 10 },
+  { name: 'Tabasco Long Chocolate', price: 100, seedCount: 10 },
+  { name: 'Tabasco Round', price: 85, seedCount: 10 },
 ];
 
 // Функция для получения всех данных
@@ -391,4 +637,61 @@ export function getAllPepperSeedsVarieties(): Omit<
   'id' | 'createdAt' | 'updatedAt'
 >[] {
   return parsePepperSeedsData(samplePepperSeedsData);
+}
+
+// Функция для группировки сортов по общему названию
+export function groupVarietiesByName(
+  varieties: Omit<PepperVariety, 'id' | 'createdAt' | 'updatedAt'>[],
+) {
+  const groups: Record<string, Omit<PepperVariety, 'id' | 'createdAt' | 'updatedAt'>[]> = {};
+
+  varieties.forEach((variety) => {
+    // Извлекаем базовое название (первое слово)
+    const baseName = variety.name.split(' ')[0];
+
+    if (!groups[baseName]) {
+      groups[baseName] = [];
+    }
+
+    groups[baseName].push(variety);
+  });
+
+  return groups;
+}
+
+// Функция для получения группированных сортов
+export function getGroupedVarieties() {
+  const allVarieties = getAllPepperSeedsVarieties();
+  return groupVarietiesByName(allVarieties);
+}
+
+// Функция для получения сортов с группировкой (оптимизированная версия)
+export function getOptimizedVarieties() {
+  const groups = getGroupedVarieties();
+  const optimizedVarieties: Omit<PepperVariety, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+
+  Object.entries(groups).forEach(([baseName, varieties]) => {
+    if (varieties.length === 1) {
+      // Если только один сорт в группе, добавляем как есть
+      optimizedVarieties.push(varieties[0]);
+    } else {
+      // Если несколько сортов, создаем основной сорт и добавляем подварианты
+      const mainVariety = varieties[0];
+      optimizedVarieties.push({
+        ...mainVariety,
+        name: baseName, // Используем базовое название
+        description: `${baseName} - группа сортов с различными характеристиками. Включает ${varieties.length} разновидностей.`,
+      });
+
+      // Добавляем подварианты с уточненными названиями
+      varieties.slice(1).forEach((variety) => {
+        optimizedVarieties.push({
+          ...variety,
+          description: `${variety.name} - разновидность сорта ${baseName}. ${variety.description}`,
+        });
+      });
+    }
+  });
+
+  return optimizedVarieties;
 }
