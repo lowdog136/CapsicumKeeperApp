@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "530249028171",
+    "project_id": "pepperfarmapp-e782b",
+    "storage_bucket": "pepperfarmapp-e782b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:530249028171:android:b5a95e58712a047ec233ce",
+        "android_client_info": {
+          "package_name": "CapsicumKeeper.ru"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "530249028171-s275dn5fs4nmbd9dbm4soruif10909jk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBgir6SjEeHGm54egKUpkRMxc_4Rr1peMo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "530249028171-s275dn5fs4nmbd9dbm4soruif10909jk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -770,22 +770,65 @@ defineExpose({
 
 <style scoped>
 .my-card {
-  max-width: 370px;
-  min-width: 320px;
-  width: 100%;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
 }
-@media (min-width: 1024px) {
+
+.my-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Улучшения для мобильных устройств */
+@media (max-width: 599px) {
   .my-card {
-    width: 370px;
-    min-width: 370px;
-    max-width: 370px;
+    margin-bottom: 1rem;
+  }
+
+  .my-card .q-img {
+    height: 150px !important;
+  }
+
+  .my-card .q-card-section {
+    padding: 12px;
+  }
+
+  .my-card .text-h6 {
+    font-size: 1.1rem;
+  }
+
+  .my-card .text-subtitle2 {
+    font-size: 0.9rem;
+  }
+
+  .my-card .text-caption {
+    font-size: 0.75rem;
   }
 }
-@media (max-width: 1023px) {
-  .my-card {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
+
+/* Улучшения для планшетов */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .my-card .q-img {
+    height: 180px !important;
   }
+}
+
+/* Компактный режим для карточек с большим количеством контента */
+.compact-mode .q-card-section {
+  padding: 8px 12px;
+}
+
+.compact-mode .text-h6 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.compact-mode .q-mb-xs {
+  margin-bottom: 4px;
+}
+
+.compact-mode .q-mt-sm {
+  margin-top: 8px;
 }
 </style>

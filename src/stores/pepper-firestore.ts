@@ -55,6 +55,168 @@ export const usePepperFirestore = defineStore('pepperFirestore', {
       }
     },
 
+    // Функция для миграции существующих перцев без userId
+    async migrateExistingPeppers() {
+      const userStore = useUserStore();
+      if (!userStore.user) {
+        throw new Error('Только авторизованный пользователь может выполнять миграцию');
+      }
+
+      try {
+        console.log('Начинаем миграцию существующих перцев...');
+
+        // Получаем все перцы без userId
+        const peppersRef = collection(db, 'peppers');
+        const q = query(peppersRef, where('userId', '==', null));
+        const querySnapshot = await getDocs(q);
+
+        console.log(`Найдено ${querySnapshot.size} перцев для миграции`);
+
+        let migratedCount = 0;
+
+        for (const pepperDoc of querySnapshot.docs) {
+          const pepperData = pepperDoc.data();
+
+          // Добавляем userId к существующему перцу
+          await updateDoc(doc(db, 'peppers', pepperDoc.id), {
+            userId: userStore.user!.uid,
+            updatedAt: new Date().toISOString(),
+          });
+
+          console.log(`Мигрирован перец "${pepperData.name}" с ID: ${pepperDoc.id}`);
+          migratedCount++;
+        }
+
+        console.log(`Миграция завершена! Мигрировано: ${migratedCount}`);
+
+        // Перезагружаем список перцев
+        await this.fetchPeppers();
+
+        return migratedCount;
+      } catch (error) {
+        console.error('Error migrating peppers:', error);
+        throw error;
+      }
+    },
+
+    // Функция для миграции ВСЕХ перцев к текущему пользователю (для консоли браузера)
+    async migrateAllPeppersToCurrentUser() {
+      const userStore = useUserStore();
+      if (!userStore.user) {
+        throw new Error('Только авторизованный пользователь может выполнять миграцию');
+      }
+
+      try {
+        console.log('Начинаем миграцию ВСЕХ перцев к текущему пользователю...');
+
+        // Получаем ВСЕ перцы
+        const peppersRef = collection(db, 'peppers');
+        const querySnapshot = await getDocs(peppersRef);
+
+        console.log(`Найдено ${querySnapshot.size} перцев для миграции`);
+
+        let migratedCount = 0;
+
+        for (const pepperDoc of querySnapshot.docs) {
+          const pepperData = pepperDoc.data();
+
+          // Обновляем userId для всех перцев
+          await updateDoc(doc(db, 'peppers', pepperDoc.id), {
+            userId: userStore.user!.uid,
+            updatedAt: new Date().toISOString(),
+          });
+
+          console.log(`Мигрирован перец "${pepperData.name}" с ID: ${pepperDoc.id}`);
+          migratedCount++;
+        }
+
+        console.log(`Миграция завершена! Мигрировано: ${migratedCount}`);
+
+        // Перезагружаем список перцев
+        await this.fetchPeppers();
+
+        return migratedCount;
+      } catch (error) {
+        console.error('Error migrating all peppers:', error);
+        throw error;
+      }
+    },
+
+    // Функция для удаления всех перцев (очистка тестовых данных)
+    async clearAllPeppers() {
+      const userStore = useUserStore();
+      if (!userStore.user) {
+        throw new Error('Только авторизованный пользователь может очищать данные');
+      }
+
+      try {
+        console.log('Начинаем очистку всех перцев...');
+
+        // Получаем ВСЕ перцы
+        const peppersRef = collection(db, 'peppers');
+        const querySnapshot = await getDocs(peppersRef);
+
+        console.log(`Найдено ${querySnapshot.size} перцев для удаления`);
+
+        let deletedCount = 0;
+
+        for (const pepperDoc of querySnapshot.docs) {
+          const pepperData = pepperDoc.data();
+
+          // Удаляем перец
+          await deleteDoc(doc(db, 'peppers', pepperDoc.id));
+
+          console.log(`Удален перец "${pepperData.name}" с ID: ${pepperDoc.id}`);
+          deletedCount++;
+        }
+
+        console.log(`Очистка завершена! Удалено: ${deletedCount}`);
+
+        // Перезагружаем список перцев
+        await this.fetchPeppers();
+
+        return deletedCount;
+      } catch (error) {
+        console.error('Error clearing peppers:', error);
+        throw error;
+      }
+    },
+
+    // Функция для проверки данных в консоли браузера
+    async debugPeppers() {
+      try {
+        console.log('=== ДЕБАГ ПЕРЦЕВ ===');
+
+        // Получаем все перцы
+        const peppersRef = collection(db, 'peppers');
+        const querySnapshot = await getDocs(peppersRef);
+
+        console.log(`Всего перцев в базе: ${querySnapshot.size}`);
+
+        querySnapshot.docs.forEach((doc, index) => {
+          const data = doc.data();
+          console.log(`Перец ${index + 1}:`, {
+            id: doc.id,
+            name: data.name,
+            userId: data.userId,
+            stage: data.stage,
+            createdAt: data.createdAt,
+          });
+        });
+
+        // Проверяем текущего пользователя
+        const userStore = useUserStore();
+        console.log('Текущий пользователь:', userStore.user?.uid);
+
+        // Проверяем загруженные перцы в store
+        console.log('Перцы в store:', this.peppers);
+
+        console.log('=== КОНЕЦ ДЕБАГА ===');
+      } catch (error) {
+        console.error('Ошибка при дебаге:', error);
+      }
+    },
+
     async addPepper(pepper: Omit<Pepper, 'id'>) {
       const userStore = useUserStore();
       if (!userStore.user) {

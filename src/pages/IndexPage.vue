@@ -1,9 +1,15 @@
 <template>
   <q-page class="q-pa-md">
-    <!-- Заголовок -->
-    <div class="text-center q-mb-lg">
-      <h4 class="q-my-none">Добро пожаловать в CapsicumKeeper</h4>
-      <p class="text-grey-6 q-mt-sm">Отслеживайте рост ваших перцев и изучайте новые сорта</p>
+    <!-- Приветственный заголовок -->
+    <div class="text-center q-mb-xl">
+      <div class="row justify-center q-mb-md">
+        <q-icon name="local_florist" size="80px" color="primary" />
+      </div>
+      <h2 class="q-my-none text-primary">CapsicumKeeper</h2>
+      <p class="text-h6 text-grey-7 q-mt-sm">Ваш персональный помощник для выращивания перцев</p>
+      <p class="text-body1 text-grey-6 q-mt-md">
+        Отслеживайте рост, ведите дневник ухода и изучайте разнообразие сортов
+      </p>
     </div>
 
     <!-- Загрузка авторизации -->
@@ -15,11 +21,11 @@
     <!-- Не авторизован -->
     <div v-else-if="!userStore.user" class="text-center q-pa-xl">
       <q-icon name="account_circle" size="100px" color="grey-4" />
-      <div class="text-h6 q-mt-md text-grey-6">Войдите в систему</div>
-      <div class="text-body2 text-grey-5 q-mt-sm">
-        Чтобы отслеживать свои перцы, необходимо авторизоваться
+      <div class="text-h6 q-mt-md text-grey-6">Добро пожаловать!</div>
+      <div class="text-body2 text-grey-5 q-mt-sm q-mb-lg">
+        Войдите в систему, чтобы начать отслеживать свои перцы
       </div>
-      <div class="row justify-center q-mt-lg q-gutter-md">
+      <div class="row justify-center q-gutter-md">
         <q-btn color="primary" icon="login" label="Войти" @click="showLoginDialog = true" />
         <q-btn
           color="secondary"
@@ -32,118 +38,143 @@
 
     <!-- Авторизован -->
     <div v-else>
-      <!-- Загрузка перцев -->
-      <div v-if="loading" class="text-center q-pa-xl">
-        <q-spinner-dots color="primary" size="50px" />
-        <div class="q-mt-md">Загрузка ваших перцев...</div>
-      </div>
-
-      <!-- Ошибка загрузки -->
-      <div v-else-if="error" class="text-center q-pa-xl">
-        <q-icon name="error" size="100px" color="red-4" />
-        <div class="text-h6 q-mt-md text-red-6">Ошибка загрузки</div>
-        <div class="text-body2 text-grey-5 q-mt-sm">{{ error }}</div>
-        <q-btn color="primary" label="Попробовать снова" class="q-mt-md" @click="fetchPeppers" />
-      </div>
-
-      <!-- Пустое состояние -->
-      <div v-else-if="peppers.length === 0" class="text-center q-pa-xl">
-        <q-icon name="local_florist" size="100px" color="grey-4" />
-        <div class="text-h6 q-mt-md text-grey-6">У вас пока нет перцев</div>
-        <div class="text-body2 text-grey-5 q-mt-sm">
-          Добавьте свой первый перец или изучите библиотеку сортов
-        </div>
-        <div class="row justify-center q-mt-lg q-gutter-md">
-          <q-btn
-            color="primary"
-            icon="add"
-            label="Добавить перец"
-            @click="$router.push('/add-pepper')"
-          />
-          <q-btn
-            color="secondary"
-            icon="library_books"
-            label="Библиотека сортов"
-            @click="$router.push('/variety-library')"
-          />
-        </div>
-      </div>
-
-      <!-- Список перцев -->
-      <div v-else>
-        <div class="row items-center justify-between q-mb-md">
-          <h5 class="q-my-none">Ваши перцы ({{ peppers.length }})</h5>
-          <q-btn
-            color="primary"
-            icon="add"
-            label="Добавить перец"
-            @click="$router.push('/add-pepper')"
-          />
+      <!-- Краткая статистика -->
+      <div class="row q-col-gutter-md q-mb-xl">
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="local_florist" size="48px" color="primary" />
+              <div class="text-h4 q-mt-sm">{{ peppers.length }}</div>
+              <div class="text-body2 text-grey-6">Ваших перцев</div>
+            </q-card-section>
+          </q-card>
         </div>
 
-        <div class="row q-gutter-md">
-          <div
-            v-for="pepper in pagedPeppers"
-            :key="pepper.id"
-            class="col-12 col-sm-6 col-md-4 col-lg-3"
-          >
-            <PepperCard
-              :pepper="pepper"
-              @update:stage="updateStage(pepper.id, $event)"
-              @delete="handleDelete"
-              @toggle-favorite="handleToggleFavorite"
-            />
-          </div>
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="favorite" size="48px" color="red" />
+              <div class="text-h4 q-mt-sm">{{ favoritePeppersCount }}</div>
+              <div class="text-body2 text-grey-6">В избранном</div>
+            </q-card-section>
+          </q-card>
         </div>
 
-        <!-- Пагинация -->
-        <div class="row justify-center q-mt-lg" v-if="pageCount > 1">
-          <q-pagination
-            v-model="page"
-            :max="pageCount"
-            color="primary"
-            input
-            boundary-numbers
-            size="md"
-          />
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="eco" size="48px" color="green" />
+              <div class="text-h4 q-mt-sm">{{ activePeppersCount }}</div>
+              <div class="text-body2 text-grey-6">Активных</div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="library_books" size="48px" color="blue" />
+              <div class="text-h4 q-mt-sm">{{ varietiesCount }}</div>
+              <div class="text-body2 text-grey-6">Сортов в библиотеке</div>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
-    </div>
 
-    <!-- Быстрые действия -->
-    <div class="row q-col-gutter-md q-mt-xl">
-      <div class="col-12 col-md-6">
-        <q-card class="text-center">
-          <q-card-section>
-            <q-icon name="library_books" size="48px" color="primary" />
-            <div class="text-h6 q-mt-sm">Библиотека сортов</div>
-            <div class="text-body2 text-grey-6 q-mt-sm">
-              Изучите разнообразие сортов перцев со всего мира
-            </div>
-            <q-btn
-              color="primary"
-              label="Перейти в библиотеку"
-              class="q-mt-md"
-              @click="$router.push('/variety-library')"
-            />
-          </q-card-section>
-        </q-card>
+      <!-- Быстрые действия -->
+      <div class="row q-col-gutter-md q-mb-xl" v-if="userStore.user">
+        <div class="col-12 col-md-6">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="list" size="48px" color="primary" />
+              <div class="text-h6 q-mt-sm">Мои перцы</div>
+              <div class="text-body2 text-grey-6 q-mt-sm">
+                Просмотрите и управляйте своими перцами
+              </div>
+              <q-btn
+                color="primary"
+                label="Перейти к списку"
+                class="q-mt-md"
+                @click="$router.push('/peppers')"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="add" size="48px" color="green" />
+              <div class="text-h6 q-mt-sm">Добавить перец</div>
+              <div class="text-body2 text-grey-6 q-mt-sm">
+                Добавьте новый перец в свою коллекцию
+              </div>
+              <q-btn
+                color="green"
+                label="Добавить"
+                class="q-mt-md"
+                @click="$router.push('/add-pepper')"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
 
-      <div class="col-12 col-md-6">
-        <q-card class="text-center">
-          <q-card-section>
-            <q-icon name="favorite" size="48px" color="red" />
-            <div class="text-h6 q-mt-sm">Избранные сорта</div>
-            <div class="text-body2 text-grey-6 q-mt-sm">Ваши любимые сорта для будущих посадок</div>
-            <q-btn
-              color="red"
-              label="Посмотреть избранное"
-              class="q-mt-md"
-              @click="$router.push('/favorites')"
-            />
-          </q-card-section>
-        </q-card>
+      <!-- Дополнительные возможности -->
+      <div class="row q-col-gutter-md">
+        <div class="col-12 col-md-4">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="library_books" size="48px" color="primary" />
+              <div class="text-h6 q-mt-sm">Библиотека сортов</div>
+              <div class="text-body2 text-grey-6 q-mt-sm">
+                Изучите разнообразие сортов перцев со всего мира
+              </div>
+              <q-btn
+                color="primary"
+                label="Перейти в библиотеку"
+                class="q-mt-md"
+                @click="$router.push('/variety-library')"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-12 col-md-4" v-if="userStore.user">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="favorite" size="48px" color="red" />
+              <div class="text-h6 q-mt-sm">Избранные сорта</div>
+              <div class="text-body2 text-grey-6 q-mt-sm">
+                Ваши любимые сорта для будущих посадок
+              </div>
+              <q-btn
+                color="red"
+                label="Посмотреть избранное"
+                class="q-mt-md"
+                @click="$router.push('/favorites')"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-12" :class="userStore.user ? 'col-md-4' : 'col-md-8'">
+          <q-card class="text-center">
+            <q-card-section>
+              <q-icon name="assignment" size="48px" color="orange" />
+              <div class="text-h6 q-mt-sm">Дорожная карта</div>
+              <div class="text-body2 text-grey-6 q-mt-sm">
+                Планы развития и новые функции приложения
+              </div>
+              <q-btn
+                color="orange"
+                label="Посмотреть планы"
+                class="q-mt-md"
+                @click="$router.push('/roadmap')"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
     </div>
 
@@ -169,37 +200,36 @@
 import { storeToRefs } from 'pinia';
 import { usePepperFirestore } from 'stores/pepper-firestore';
 import { useUserStore } from 'stores/user-store';
+import { useVarietyLibraryStore } from 'stores/variety-library';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
-import PepperCard from 'components/PepperCard.vue';
-import type { Pepper } from 'components/models';
 import { ref, computed, onMounted, watch } from 'vue';
 
 const pepperFirestore = usePepperFirestore();
 const userStore = useUserStore();
-const { peppers, loading, error } = storeToRefs(pepperFirestore);
+const varietyStore = useVarietyLibraryStore();
+const { peppers } = storeToRefs(pepperFirestore);
+const { varieties } = storeToRefs(varietyStore);
 const $q = useQuasar();
 const $router = useRouter();
 
-const page = ref(1);
 const showLoginDialog = ref(false);
-const perPage = 8;
 
-const pageCount = computed(() => Math.ceil(peppers.value.length / perPage));
-const pagedPeppers = computed(() => {
-  const start = (page.value - 1) * perPage;
-  return peppers.value.slice(start, start + perPage);
-});
+// Вычисляемые свойства для статистики
+const favoritePeppersCount = computed(() => peppers.value.filter((p) => p.isFavorite).length);
 
-// Загружаем перцы при изменении авторизации
+const activePeppersCount = computed(
+  () => peppers.value.filter((p) => p.stage !== 'сбор урожая').length,
+);
+
+const varietiesCount = computed(() => varieties.value.length);
+
+// Загружаем данные при изменении авторизации
 watch(
   () => userStore.user,
   (newUser) => {
     if (newUser) {
-      fetchPeppers();
-    } else {
-      // Сбрасываем данные при выходе
-      pepperFirestore.$reset();
+      loadData();
     }
   },
 );
@@ -207,87 +237,57 @@ watch(
 onMounted(async () => {
   // Ждем завершения проверки авторизации
   if (!userStore.loading && userStore.user) {
-    await fetchPeppers();
+    await loadData();
   }
 });
 
-async function fetchPeppers() {
+async function loadData() {
   try {
-    await pepperFirestore.fetchPeppers();
+    await Promise.all([pepperFirestore.fetchPeppers(), varietyStore.loadVarieties()]);
   } catch (error) {
-    console.error('Error fetching peppers:', error);
-    $q.notify({
-      color: 'negative',
-      message: 'Ошибка загрузки перцев',
-      icon: 'error',
-    });
+    console.error('Error loading data:', error);
   }
 }
 
 function login() {
   showLoginDialog.value = false;
-  // Здесь можно добавить логику входа
   $q.notify({
     color: 'info',
     message: 'Используйте кнопку входа в меню',
     icon: 'info',
   });
 }
-
-async function updateStage(id: string, newStage: Pepper['stage']) {
-  try {
-    await pepperFirestore.updatePepper(id, { stage: newStage });
-    $q.notify({
-      color: 'positive',
-      message: 'Стадия роста обновлена',
-      icon: 'check_circle',
-    });
-  } catch (error) {
-    console.error('Error updating stage:', error);
-    $q.notify({
-      color: 'negative',
-      message: 'Ошибка обновления стадии',
-      icon: 'error',
-    });
-  }
-}
-
-async function handleDelete(id: string) {
-  try {
-    await pepperFirestore.deletePepper(id);
-    $q.notify({
-      color: 'positive',
-      message: 'Перец удален',
-      icon: 'delete_forever',
-    });
-  } catch (error) {
-    console.error('Error deleting pepper:', error);
-    $q.notify({
-      color: 'negative',
-      message: 'Ошибка удаления перца',
-      icon: 'error',
-    });
-  }
-}
-
-async function handleToggleFavorite(id: string) {
-  try {
-    const pepper = peppers.value.find((p) => p.id === id);
-    if (pepper) {
-      await pepperFirestore.updatePepper(id, { isFavorite: !pepper.isFavorite });
-      $q.notify({
-        color: 'positive',
-        message: pepper.isFavorite ? 'Убрано из избранного' : 'Добавлено в избранное',
-        icon: 'favorite',
-      });
-    }
-  } catch (error) {
-    console.error('Error toggling favorite:', error);
-    $q.notify({
-      color: 'negative',
-      message: 'Ошибка обновления избранного',
-      icon: 'error',
-    });
-  }
-}
 </script>
+
+<style scoped>
+.pepper-card-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pepper-card-wrapper :deep(.my-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+/* Улучшения для мобильных устройств */
+@media (max-width: 599px) {
+  .pepper-card-wrapper :deep(.my-card) {
+    margin-bottom: 1rem;
+  }
+
+  .pepper-card-wrapper :deep(.q-img) {
+    height: 150px !important;
+  }
+}
+
+/* Улучшения для планшетов */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .pepper-card-wrapper :deep(.q-img) {
+    height: 180px !important;
+  }
+}
+</style>

@@ -13,29 +13,45 @@
         </div>
       </div>
       <div class="row q-gutter-sm">
+        <!-- Кнопки только для администратора -->
+        <template v-if="isAdmin">
+          <q-btn
+            color="primary"
+            icon="download"
+            label="Полный импорт"
+            @click="importAllVarieties"
+            :loading="store.loading"
+          />
+          <q-btn
+            color="info"
+            icon="refresh"
+            label="Проверить новые"
+            @click="checkNewVarieties"
+            :loading="store.loading"
+          />
+          <q-btn
+            color="warning"
+            icon="search"
+            label="Проверить дубликаты"
+            @click="checkDuplicates"
+          />
+          <q-btn
+            color="warning"
+            icon="clean"
+            label="Удалить дубликаты"
+            @click="removeDuplicates"
+            :loading="store.loading"
+          />
+        </template>
+
+        <!-- Кнопка добавления сорта для всех авторизованных пользователей -->
         <q-btn
-          color="primary"
-          icon="download"
-          label="Полный импорт"
-          @click="importAllVarieties"
-          :loading="store.loading"
+          v-if="userStore.user"
+          color="secondary"
+          icon="add"
+          label="Добавить сорт"
+          @click="showAddDialog = true"
         />
-        <q-btn
-          color="info"
-          icon="refresh"
-          label="Проверить новые"
-          @click="checkNewVarieties"
-          :loading="store.loading"
-        />
-        <q-btn color="warning" icon="search" label="Проверить дубликаты" @click="checkDuplicates" />
-        <q-btn
-          color="warning"
-          icon="clean"
-          label="Удалить дубликаты"
-          @click="removeDuplicates"
-          :loading="store.loading"
-        />
-        <q-btn color="secondary" icon="add" label="Добавить сорт" @click="showAddDialog = true" />
       </div>
     </div>
 
@@ -127,7 +143,7 @@
           </div>
 
           <!-- Только избранные -->
-          <div class="col-12 col-md-2">
+          <div class="col-12 col-md-2" v-if="userStore.user">
             <q-toggle v-model="filters.onlyFavorites" label="Только избранные" color="red" />
           </div>
         </div>
@@ -136,7 +152,7 @@
 
     <!-- Статистика -->
     <div class="row q-col-gutter-md q-mb-lg">
-      <div class="col-12 col-md-3">
+      <div class="col-12" :class="userStore.user ? 'col-md-3' : 'col-md-4'">
         <q-card color="primary" text-color="white">
           <q-card-section>
             <div class="text-h6">{{ filteredVarieties.length }}</div>
@@ -144,7 +160,7 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-12 col-md-3">
+      <div class="col-12 col-md-3" v-if="userStore.user">
         <q-card color="red" text-color="white">
           <q-card-section>
             <div class="text-h6">{{ store.favoriteVarieties.length }}</div>
@@ -152,7 +168,7 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-12 col-md-3">
+      <div class="col-12" :class="userStore.user ? 'col-md-3' : 'col-md-4'">
         <q-card color="orange" text-color="white">
           <q-card-section>
             <div class="text-h6">{{ speciesStats.chinense }}</div>
@@ -160,7 +176,7 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-12 col-md-3">
+      <div class="col-12" :class="userStore.user ? 'col-md-3' : 'col-md-4'">
         <q-card color="green" text-color="white">
           <q-card-section>
             <div class="text-h6">{{ speciesStats.annuum }}</div>
@@ -287,6 +303,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useVarietyLibraryStore } from 'src/stores/variety-library';
+import { useUserStore } from 'src/stores/user-store';
 import VarietyCard from 'src/components/VarietyCard.vue';
 import type {
   PepperVariety,
@@ -297,6 +314,12 @@ import type {
 
 const $q = useQuasar();
 const store = useVarietyLibraryStore();
+const userStore = useUserStore();
+
+// Определяем, является ли пользователь администратором
+const isAdmin = computed(() => {
+  return userStore.user?.email === 'lowdog136@gmail.com';
+});
 
 const ITEMS_PER_PAGE = 12;
 const currentPage = ref(1);

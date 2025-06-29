@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import fs from 'fs';
 
 // Читаем package.json
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
