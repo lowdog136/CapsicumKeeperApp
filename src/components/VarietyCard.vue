@@ -16,12 +16,23 @@
     <q-card-section>
       <div class="row items-center justify-between q-mb-sm">
         <h6 class="q-my-none text-weight-bold">{{ variety.name }}</h6>
-        <q-chip
-          :color="getHeatLevelInfo(variety.heatLevel).color"
-          text-color="white"
-          size="sm"
-          :label="getHeatLevelInfo(variety.heatLevel).name"
-        />
+        <div class="row items-center q-gutter-xs">
+          <!-- Индикатор группы -->
+          <q-chip
+            v-if="isGroup"
+            color="info"
+            text-color="white"
+            size="sm"
+            icon="group"
+            label="Группа"
+          />
+          <q-chip
+            :color="getHeatLevelInfo(variety.heatLevel).color"
+            text-color="white"
+            size="sm"
+            :label="getHeatLevelInfo(variety.heatLevel).name"
+          />
+        </div>
       </div>
 
       <!-- Научная классификация -->
@@ -127,6 +138,30 @@
             class="q-mb-md"
           />
 
+          <!-- Показываем подвиды если это группа -->
+          <div v-if="isGroup && subVarieties.length > 0" class="q-mb-lg">
+            <h6>Подвиды в группе ({{ subVarieties.length }})</h6>
+            <div class="row q-col-gutter-sm">
+              <div
+                v-for="subVariety in subVarieties"
+                :key="subVariety.name"
+                class="col-12 col-md-6 col-lg-4"
+              >
+                <q-card flat bordered class="q-pa-sm">
+                  <div class="text-subtitle2">{{ subVariety.name }}</div>
+                  <div class="text-caption text-grey-6">{{ subVariety.description }}</div>
+                  <q-chip
+                    :color="getHeatLevelInfo(subVariety.heatLevel).color"
+                    text-color="white"
+                    size="sm"
+                    :label="getHeatLevelInfo(subVariety.heatLevel).name"
+                    class="q-mt-xs"
+                  />
+                </q-card>
+              </div>
+            </div>
+          </div>
+
           <div class="row q-col-gutter-md">
             <div class="col-12 col-md-6">
               <h6>Описание</h6>
@@ -202,9 +237,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useVarietyLibraryStore } from 'src/stores/variety-library';
 import { useUserStore } from 'src/stores/user-store';
+import { getVarietiesByGroup } from 'src/utils/pepper-seeds-parser';
 import type { PepperVariety } from 'src/components/models';
 
 const props = defineProps<{
@@ -221,6 +257,29 @@ const showDetails = ref(false);
 
 const getHeatLevelInfo = store.getHeatLevelInfo;
 const getSpeciesInfo = store.getSpeciesInfo;
+
+// Определяем, является ли сорт группой
+const isGroup = computed(() => {
+  // Проверяем, есть ли в описании упоминание о группе
+  return (
+    props.variety.description.includes('группа сортов') ||
+    props.variety.description.includes('разновидностей')
+  );
+});
+
+// Получаем подвиды для группы
+const subVarieties = computed(() => {
+  if (!isGroup.value) return [];
+
+  try {
+    // Получаем базовое название группы
+    const baseName = props.variety.name.split(' ')[0];
+    return getVarietiesByGroup(baseName);
+  } catch (error) {
+    console.error('Ошибка при получении подвидов:', error);
+    return [];
+  }
+});
 
 const colorMap: Record<string, string> = {
   красный: '#e53935',

@@ -392,3 +392,38 @@ export function getAllPepperSeedsVarieties(): Omit<
 >[] {
   return parsePepperSeedsData(samplePepperSeedsData);
 }
+
+// Функция для получения сортов с группировкой (оптимизированная версия - только группы)
+export function getOptimizedVarieties() {
+  const groups = getGroupedVarieties();
+  const optimizedVarieties: Omit<PepperVariety, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+
+  Object.entries(groups).forEach(([baseName, varieties]) => {
+    if (varieties.length === 1) {
+      // Если только один сорт в группе, добавляем как есть
+      optimizedVarieties.push(varieties[0]);
+    } else {
+      // Если несколько сортов, создаем только основной сорт-группу
+      const mainVariety = varieties[0];
+      optimizedVarieties.push({
+        ...mainVariety,
+        name: baseName, // Используем базовое название
+        description: `${baseName} - группа сортов с различными характеристиками. Включает ${varieties.length} разновидностей: ${varieties.map((v) => v.name).join(', ')}`,
+        // Добавляем информацию о подвидах в описание
+        growingTips: [
+          ...mainVariety.growingTips,
+          `Данная группа содержит ${varieties.length} разновидностей`,
+          'Выберите конкретный подвид для получения детальной информации',
+        ],
+      });
+    }
+  });
+
+  return optimizedVarieties;
+}
+
+// Функция для получения всех подвидов конкретной группы
+export function getVarietiesByGroup(groupName: string) {
+  const allVarieties = getAllPepperSeedsVarieties();
+  return allVarieties.filter((variety) => variety.name.startsWith(groupName));
+}
