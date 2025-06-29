@@ -425,15 +425,15 @@ export const useRoadmapStore = defineStore('roadmap', () => {
         estimatedEffort: 'small' as const,
       },
       {
-        title: 'Исправить механизм импорта сортов с pepperseeds.ru',
+        title: 'Завершено: Исправить механизм импорта сортов с pepperseeds.ru',
         description:
-          'Оптимизировать импорт сортов: группировка по общему названию, улучшение производительности, исправление загрузки только 89 сортов',
+          'Оптимизирован импорт сортов: группировка по общему названию, улучшение производительности, исправление загрузки только 89 сортов',
         priority: 'high' as const,
-        status: 'planned' as const,
+        status: 'completed' as const,
         category: 'bugfix' as const,
         targetVersion: '1.1.1',
         notes:
-          'Проблемы: загружается только 89 сортов вместо полной коллекции, высокое потребление ресурсов, нужна группировка по названиям (например, Aji: Aji Charapita, Aji Cachucha, Aji Golden)',
+          'Реализовано: расширена база до 400+ сортов, добавлена группировка (Aji: Aji Charapita, Aji Cachucha, Aji Golden), создана функция getOptimizedVarieties(), снижено потребление ресурсов, улучшена производительность',
         estimatedEffort: 'large' as const,
       },
       {
