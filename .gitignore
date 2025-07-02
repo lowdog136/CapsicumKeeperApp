@@ -1,4 +1,4 @@
-.DS_Store
+ьс.DS_Store
 .thumbs.db
 node_modules
 
@@ -43,3 +43,5 @@ ui-debug.log
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+scripts/all-peppers.json

@@ -1,8 +1,44 @@
 <template>
   <q-page class="q-pa-md">
     <div class="q-mb-lg">
-      <h4 class="q-my-none">Библиотека сортов v2</h4>
-      <p class="text-grey-6 q-mt-sm">Новая версия библиотеки сортов с поддержкой пагинации</p>
+      <div class="row items-center justify-between">
+        <div>
+          <h4 class="q-my-none">Библиотека сортов v2</h4>
+          <p class="text-grey-6 q-mt-sm">
+            Изучите разнообразие сортов перца со всего мира.<br />
+            Сорта и описания взяты с сайта
+            <a href="https://pepperseeds.ru" target="_blank" class="text-primary">pepperseeds.ru</a>
+          </p>
+          <div class="row q-col-gutter-md q-mt-sm">
+            <div class="col-auto">
+              <q-badge color="primary" outline> Сортов в базе: {{ varietiesCount }} </q-badge>
+            </div>
+            <div class="col-auto" v-if="lastUpdateText">
+              <q-badge color="grey-7" outline> Последнее обновление: {{ lastUpdateText }} </q-badge>
+            </div>
+          </div>
+        </div>
+        <div>
+          <q-btn
+            v-if="isAdmin"
+            color="primary"
+            :loading="refreshing"
+            icon="refresh"
+            label="Обновить библиотеку"
+            @click="refreshLibrary"
+          />
+          <div>
+            <q-badge color="grey-7" outline>
+              Последнее обновление:
+              <span v-if="lastUpdateText && lastUpdateText.length > 0">{{ lastUpdateText }}</span>
+              <span v-else>Нет данных о последнем обновлении</span>
+            </q-badge>
+            <q-badge color="primary" outline v-if="store.lastManualUpdate">
+              Последнее ручное обновление: {{ formatManualUpdate(store.lastManualUpdate) }}
+            </q-badge>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-if="store.loading" class="text-center q-pa-xl">
@@ -17,9 +53,41 @@
     </div>
 
     <div v-else>
+      <!-- Панель поиска и сортировки -->
+      <div class="row q-col-gutter-md q-mb-md items-center">
+        <div class="col-12 col-md-6">
+          <q-select
+            v-model="searchQuery"
+            :options="nameOptions"
+            use-input
+            input-debounce="200"
+            label="Поиск по наименованию"
+            dense
+            clearable
+            emit-value
+            map-options
+            hide-dropdown-icon
+            prepend-inner-icon="search"
+            @filter="filterNameOptions"
+            @input-value="onInputValue"
+          />
+        </div>
+        <div class="col-12 col-md-4">
+          <q-select
+            v-model="selectedSpecies"
+            :options="speciesOptions"
+            label="Сортировка по виду"
+            dense
+            clearable
+            emit-value
+            map-options
+            prepend-inner-icon="category"
+          />
+        </div>
+      </div>
       <div class="row q-col-gutter-md">
         <div
-          v-for="variety in store.items"
+          v-for="variety in filteredItems"
           :key="variety.id"
           class="col-12 col-sm-6 col-md-4 col-lg-3"
         >
@@ -94,22 +162,24 @@
         </div>
       </div>
       <div class="row justify-center q-mt-lg">
-        <q-btn
-          :disable="store.loading || store.currentPage === 1"
-          icon="chevron_left"
-          @click="store.fetchPrevPage"
-          flat
-          round
-          class="q-mr-sm"
-        />
-        <q-btn
-          :disable="store.loading || !store.hasNextPage"
-          icon="chevron_right"
-          @click="store.fetchNextPage"
-          flat
-          round
-          class="q-ml-sm"
-        />
+        <template v-if="!isFiltering">
+          <q-btn
+            :disable="store.loading || store.currentPage === 1"
+            icon="chevron_left"
+            @click="store.fetchPrevPage"
+            flat
+            round
+            class="q-mr-sm"
+          />
+          <q-btn
+            :disable="store.loading || !store.hasNextPage"
+            icon="chevron_right"
+            @click="store.fetchNextPage"
+            flat
+            round
+            class="q-ml-sm"
+          />
+        </template>
       </div>
     </div>
 
@@ -309,14 +379,16 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { useVarietyLibraryV2Store } from 'stores/variety-library-v2';
 import { useUserStore } from 'stores/user-store';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from 'src/boot/firebase';
+import { useQuasar } from 'quasar';
 
 const store = useVarietyLibraryV2Store();
 const userStore = useUserStore();
+const $q = useQuasar();
 
 const editingVariety = ref(null as any);
 const showEditDialog = ref(false);
@@ -377,6 +449,48 @@ const daysToMaturityCustom = ref('');
 const originInput = ref('');
 
 const isAdmin = computed(() => userStore.user?.email === 'lowdog136@gmail.com');
+
+const searchQuery = ref('');
+const selectedSpecies = ref('');
+
+// Флаг: активен ли поиск или фильтр
+const isFiltering = computed(() => !!searchQuery.value || !!selectedSpecies.value);
+
+const FIXED_SPECIES = [
+  'Capsicum annuum',
+  'Capsicum chinense',
+  'Capsicum baccatum',
+  'Capsicum pubescens',
+  'Capsicum frutescens',
+];
+
+const speciesOptions = computed(() => {
+  const set = new Set<string>(FIXED_SPECIES);
+  const source = isFiltering.value ? store.allItems : store.items;
+  source.forEach((v) => {
+    if (v.species) set.add(v.species);
+  });
+  return Array.from(set).sort();
+});
+
+// Следим за поиском/фильтром и подгружаем все сорта при необходимости
+watch([searchQuery, selectedSpecies], async ([q, s]) => {
+  if (isFiltering.value && store.allItems.length === 0) {
+    await store.fetchAllItems();
+  }
+});
+
+const filteredItems = computed(() => {
+  let result = isFiltering.value ? store.allItems : store.items;
+  if (searchQuery.value) {
+    const q = searchQuery.value.trim().toLowerCase();
+    result = result.filter((v) => v.name?.toLowerCase().includes(q));
+  }
+  if (selectedSpecies.value) {
+    result = result.filter((v) => v.species === selectedSpecies.value);
+  }
+  return result;
+});
 
 function openEdit(variety: any) {
   editingVariety.value = { ...variety };
@@ -470,6 +584,7 @@ async function saveEdit() {
   editingVariety.value.weight = updateData.weight;
   editingVariety.value.daysToMaturity = updateData.daysToMaturity;
   editingVariety.value.origin = updateData.origin;
+  store.setLastManualUpdate();
   showEditDialog.value = false;
   if (store.currentPage > 1) {
     await store.fetchPrevPage();
@@ -541,8 +656,98 @@ function getFruitLength(variety: any) {
   return '';
 }
 
+const varietiesCount = computed(() => {
+  // Если allItems уже загружены (или идет фильтрация) — показываем их длину (вся база)
+  if (store.allItems.length > 0) return store.allItems.length;
+  // Иначе — только текущая страница
+  return store.items.length;
+});
+
+function getUpdateTime(docRef: any): number | null {
+  if (!docRef) return null;
+  if (docRef.metadata && docRef.metadata.updateTime) {
+    return new Date(docRef.metadata.updateTime).getTime();
+  }
+  if (docRef.updateTime) {
+    return new Date(docRef.updateTime).getTime();
+  }
+  return null;
+}
+
+const lastUpdateText = computed(() => {
+  const arr = isFiltering.value ? store.allItems : store.items;
+  const times = arr.map((v: any) => getUpdateTime((v as any)._docRef)).filter(Boolean) as number[];
+  if (!times.length) return '';
+  const maxTime = Math.max(...times);
+  return new Date(maxTime).toLocaleString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+});
+
+const nameOptions = ref<string[]>([]);
+
+function filterNameOptions(val: string, update: (cb: () => void) => void) {
+  update(() => {
+    const arr = store.allItems.length > 0 ? store.allItems : store.items;
+    const q = val ? val.toLowerCase() : '';
+    if (q.length < 2) {
+      nameOptions.value = [];
+      return;
+    }
+    nameOptions.value = arr
+      .map((v) => v.name)
+      .filter(
+        (name, idx, self) => name && self.indexOf(name) === idx && name.toLowerCase().includes(q),
+      )
+      .slice(0, 20);
+  });
+}
+
+const refreshing = ref(false);
+async function refreshLibrary() {
+  refreshing.value = true;
+  try {
+    await Promise.all([store.fetchFirstPage(), store.fetchAllItems()]);
+    store.setLastManualUpdate();
+    $q.notify({
+      color: 'positive',
+      message: 'Библиотека обновлена',
+      icon: 'refresh',
+    });
+    filterNameOptions(searchQuery.value, () => {});
+  } catch (e) {
+    $q.notify({
+      color: 'negative',
+      message: 'Ошибка при обновлении библиотеки',
+      icon: 'error',
+    });
+  } finally {
+    refreshing.value = false;
+  }
+}
+
+function formatManualUpdate(dateStr: string) {
+  return new Date(dateStr).toLocaleString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function onInputValue(val: string) {
+  searchQuery.value = val;
+}
+
 onMounted(() => {
   store.fetchFirstPage();
+  store.fetchAllItems();
+  filterNameOptions('', () => {});
 });
 </script>
 

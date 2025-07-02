@@ -37,6 +37,12 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
   const hasNextPage = ref(false);
   const currentPage = ref(1);
   const totalCount = ref(0); // Можно обновлять при импорте или отдельным запросом
+  const allItems = ref<PepperVarietyV2[]>([]);
+  const lastManualUpdate = ref<string>('');
+
+  function setLastManualUpdate(dateStr?: string) {
+    lastManualUpdate.value = dateStr || new Date().toISOString();
+  }
 
   // Загрузка первой страницы
   const fetchFirstPage = async () => {
@@ -155,6 +161,25 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
     }
   };
 
+  // Загрузка всех сортов (для поиска/фильтрации)
+  const fetchAllItems = async () => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const snap = await getDocs(query(collection(db, 'varieties_v2'), orderBy('name')));
+      allItems.value = snap.docs.map((doc) => {
+        const data = { id: doc.id, ...doc.data() } as PepperVarietyV2;
+        (data as any)._docRef = doc;
+        return data;
+      });
+    } catch (e: any) {
+      error.value = e.message || 'Ошибка загрузки';
+      console.error('[fetchAllItems] error:', error.value);
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     items,
     loading,
@@ -166,5 +191,9 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
     fetchNextPage,
     fetchPrevPage,
     totalCount,
+    allItems,
+    fetchAllItems,
+    lastManualUpdate,
+    setLastManualUpdate,
   };
 });

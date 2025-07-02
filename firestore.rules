@@ -10,6 +10,15 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null;
     }
     
+    // Правила для новой библиотеки сортов v2
+    match /varieties_v2/{varietyId} {
+      // Все могут читать сорта (публичная библиотека)
+      allow read: if true;
+
+      // Только авторизованные пользователи могут создавать, обновлять и удалять
+      allow create, update, delete: if request.auth != null;
+    }
+    
     // Правила для перцев пользователей
     match /peppers/{pepperId} {
       // Пользователи могут читать только свои перцы
