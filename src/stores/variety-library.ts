@@ -301,15 +301,15 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     return filtered;
   };
 
-  // Полный импорт всех данных с pepperseeds.ru
+  // Полный импорт всех данных с pepperseeds.ru (оптимизированная версия)
   const importAllFromPepperSeeds = async () => {
     loading.value = true;
     error.value = null;
 
     try {
-      // Используем парсер для получения всех данных
-      const { getAllPepperSeedsVarieties } = await import('src/utils/pepper-seeds-parser');
-      const pepperSeedsVarieties = getAllPepperSeedsVarieties();
+      // Используем оптимизированный парсер для получения группированных данных
+      const { getOptimizedVarieties } = await import('src/utils/pepper-seeds-parser');
+      const pepperSeedsVarieties = getOptimizedVarieties();
 
       let addedCount = 0;
       let skippedCount = 0;
@@ -523,15 +523,15 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     }
   };
 
-  // Проверка новых сортов с pepperseeds.ru
+  // Проверка новых сортов с pepperseeds.ru (оптимизированная версия)
   const checkForNewVarieties = async () => {
     loading.value = true;
     error.value = null;
 
     try {
-      // Используем парсер для получения всех данных
-      const { getAllPepperSeedsVarieties } = await import('src/utils/pepper-seeds-parser');
-      const pepperSeedsVarieties = getAllPepperSeedsVarieties();
+      // Используем оптимизированный парсер для получения группированных данных
+      const { getOptimizedVarieties } = await import('src/utils/pepper-seeds-parser');
+      const pepperSeedsVarieties = getOptimizedVarieties();
 
       let newCount = 0;
       let existingCount = 0;
@@ -568,7 +568,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     }
   };
 
-  // Импорт только новых сортов
+  // Импорт только новых сортов (оптимизированная версия)
   const importNewVarieties = async () => {
     loading.value = true;
     error.value = null;
@@ -582,8 +582,8 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
       }
 
       // Импортируем только новые сорта
-      const { getAllPepperSeedsVarieties } = await import('src/utils/pepper-seeds-parser');
-      const pepperSeedsVarieties = getAllPepperSeedsVarieties();
+      const { getOptimizedVarieties } = await import('src/utils/pepper-seeds-parser');
+      const pepperSeedsVarieties = getOptimizedVarieties();
 
       let addedCount = 0;
 
@@ -607,6 +607,24 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     } finally {
       loading.value = false;
     }
+  };
+
+  // Получить статистику по группам сортов
+  const getVarietyGroupsStats = () => {
+    const groups: Record<string, number> = {};
+
+    varieties.value.forEach((variety) => {
+      const baseName = variety.name.split(' ')[0];
+      groups[baseName] = (groups[baseName] || 0) + 1;
+    });
+
+    return {
+      totalGroups: Object.keys(groups).length,
+      totalVarieties: varieties.value.length,
+      groups: Object.entries(groups)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count),
+    };
   };
 
   return {
@@ -639,5 +657,6 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     checkForNewVarieties,
     importNewVarieties,
     checkForDuplicates,
+    getVarietyGroupsStats,
   };
 });

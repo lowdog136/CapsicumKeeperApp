@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router';
+import VarietyLibraryV2Page from 'pages/VarietyLibraryV2Page.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -9,9 +10,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'peppers', component: () => import('pages/PepperListPage.vue') },
       { path: 'add-pepper', component: () => import('pages/AddPepperPage.vue') },
       { path: 'favorites', component: () => import('pages/FavoritesPage.vue') },
-      { path: 'variety-library', component: () => import('pages/VarietyLibraryPage.vue') },
+      { path: 'varieties', component: () => import('pages/VarietyLibraryPage.vue') },
       { path: 'roadmap', component: () => import('pages/RoadmapPage.vue') },
-      { path: 'migration', component: () => import('pages/MigrationPage.vue') },
     ],
   },
 
