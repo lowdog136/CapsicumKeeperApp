@@ -9,197 +9,33 @@
 
       <q-card-section class="q-pt-none">
         <q-form @submit="saveEntry" class="q-gutter-md">
-          <!-- Дата -->
-          <q-input
-            v-model="form.date"
-            label="Дата"
-            type="date"
-            outlined
-            :rules="[(val) => !!val || 'Дата обязательна']"
+          <!-- Полив -->
+          <WateringEntryForm
+            v-if="type === 'watering'"
+            v-model="form"
+            @update:modelValue="updateForm"
           />
 
-          <!-- Полив -->
-          <template v-if="type === 'watering'">
-            <q-input
-              v-model.number="form.volume"
-              label="Объем воды (мл)"
-              type="number"
-              outlined
-              :rules="[(val) => val > 0 || 'Объем должен быть больше 0']"
-            />
-            <q-input
-              v-model="form.note"
-              label="Заметка (необязательно)"
-              type="textarea"
-              outlined
-              rows="2"
-            />
-          </template>
-
           <!-- Удобрение -->
-          <template v-if="type === 'fertilizing'">
-            <div class="row q-col-gutter-sm q-mb-md">
-              <div class="col-8">
-                <q-input
-                  v-model="form.note"
-                  label="Название удобрения"
-                  outlined
-                  :rules="[(val) => !!val || 'Название обязательно']"
-                />
-              </div>
-              <div class="col-4">
-                <q-btn
-                  color="secondary"
-                  icon="library_books"
-                  label="Библиотека"
-                  @click="showFertilizerSelector = true"
-                  class="full-width"
-                />
-              </div>
-            </div>
-
-            <q-input
-              v-model.number="form.grams"
-              label="Количество (г)"
-              type="number"
-              outlined
-              :rules="[(val) => val > 0 || 'Количество должно быть больше 0']"
-            />
-
-            <div class="text-subtitle2 q-mt-md">Состав (%):</div>
-
-            <!-- Макроэлементы -->
-            <div class="text-caption text-grey-6 q-mb-sm">Макроэлементы:</div>
-            <div class="row q-col-gutter-sm q-mb-md">
-              <div class="col-4" v-for="element in macroElements" :key="element.symbol">
-                <q-input
-                  v-model.number="form.composition[element.symbol]"
-                  :label="`${element.symbol} (${element.name})`"
-                  type="number"
-                  outlined
-                  dense
-                  suffix="%"
-                />
-              </div>
-            </div>
-
-            <!-- Микроэлементы -->
-            <div class="text-caption text-grey-6 q-mb-sm">Микроэлементы:</div>
-            <div class="row q-col-gutter-sm">
-              <div class="col-4" v-for="element in microElements" :key="element.symbol">
-                <q-input
-                  v-model.number="form.composition[element.symbol]"
-                  :label="`${element.symbol} (${element.name})`"
-                  type="number"
-                  outlined
-                  dense
-                  suffix="%"
-                />
-              </div>
-            </div>
-          </template>
+          <FertilizingEntryForm
+            v-if="type === 'fertilizing'"
+            v-model="form"
+            @update:modelValue="updateForm"
+          />
 
           <!-- Обработка -->
-          <template v-if="type === 'treatment'">
-            <div class="row q-col-gutter-sm q-mb-md">
-              <div class="col-8">
-                <q-input
-                  v-model="form.agent"
-                  label="Средство обработки"
-                  outlined
-                  :rules="[(val) => !!val || 'Средство обязательно']"
-                />
-              </div>
-              <div class="col-4">
-                <q-btn
-                  color="secondary"
-                  icon="library_books"
-                  label="Библиотека"
-                  @click="showTreatmentSelector = true"
-                  class="full-width"
-                />
-              </div>
-            </div>
-
-            <q-input
-              v-model.number="form.volume"
-              label="Объем (мл)"
-              type="number"
-              outlined
-              :rules="[(val) => val > 0 || 'Объем должен быть больше 0']"
-            />
-            <q-input
-              v-model="form.note"
-              label="Заметка (необязательно)"
-              type="textarea"
-              outlined
-              rows="2"
-            />
-          </template>
+          <TreatmentEntryForm
+            v-if="type === 'treatment'"
+            v-model="form"
+            @update:modelValue="updateForm"
+          />
 
           <!-- Наблюдение -->
-          <template v-if="type === 'observation'">
-            <q-input
-              v-model.number="form.height"
-              label="Высота растения (см)"
-              type="number"
-              outlined
-            />
-            <q-select
-              v-model="form.leafCondition"
-              :options="leafConditions"
-              label="Состояние листьев"
-              outlined
-              :rules="[(val) => !!val || 'Состояние листьев обязательно']"
-            />
-
-            <!-- Проблемы растений -->
-            <div class="row q-col-gutter-sm q-mb-md">
-              <div class="col-8">
-                <q-input
-                  v-model="form.problems"
-                  label="Проблемы растений (необязательно)"
-                  outlined
-                  placeholder="Нажмите кнопку для выбора из библиотеки"
-                  readonly
-                />
-              </div>
-              <div class="col-4">
-                <q-btn
-                  color="secondary"
-                  icon="library_books"
-                  label="Библиотека"
-                  @click="showProblemsSelector = true"
-                  class="full-width"
-                />
-              </div>
-            </div>
-
-            <!-- Выбранные проблемы -->
-            <div v-if="selectedProblems.length > 0" class="q-mb-md">
-              <div class="text-subtitle2">Выбранные проблемы:</div>
-              <div class="row q-col-gutter-xs">
-                <q-chip
-                  v-for="problem in selectedProblems"
-                  :key="problem.id"
-                  removable
-                  @remove="removeProblem(problem.id)"
-                  :color="getSeverityColor(problem.severity)"
-                  text-color="white"
-                  :label="problem.name"
-                />
-              </div>
-            </div>
-
-            <q-input
-              v-model="form.note"
-              label="Заметки"
-              type="textarea"
-              outlined
-              rows="3"
-              :rules="[(val) => !!val || 'Заметки обязательны']"
-            />
-          </template>
+          <ObservationEntryForm
+            v-if="type === 'observation'"
+            v-model="form"
+            @update:modelValue="updateForm"
+          />
         </q-form>
       </q-card-section>
 
@@ -208,11 +44,6 @@
         <q-btn unelevated label="Сохранить" color="primary" @click="saveEntry" />
       </q-card-actions>
     </q-card>
-
-    <!-- Селектор удобрений -->
-    <FertilizerSelector v-model="showFertilizerSelector" @select="selectFertilizer" />
-    <TreatmentSelector v-model="showTreatmentSelector" @select="selectTreatment" />
-    <PlantProblemsSelector v-model="showProblemsSelector" @select="selectProblem" />
   </q-dialog>
 </template>
 
@@ -220,12 +51,10 @@
 import { ref, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import type { WateringEntry, FertilizingEntry, TreatmentEntry, Observation } from './models';
-import type { Fertilizer } from 'stores/fertilizer-library';
-import type { TreatmentAgent } from 'stores/treatment-library';
-import type { PlantProblem } from 'stores/plant-problems-library';
-import FertilizerSelector from './FertilizerSelector.vue';
-import TreatmentSelector from './TreatmentSelector.vue';
-import PlantProblemsSelector from './PlantProblemsSelector.vue';
+import WateringEntryForm from './WateringEntryForm.vue';
+import FertilizingEntryForm from './FertilizingEntryForm.vue';
+import TreatmentEntryForm from './TreatmentEntryForm.vue';
+import ObservationEntryForm from './ObservationEntryForm.vue';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -246,10 +75,6 @@ const showDialog = computed({
   set: (value: boolean) => emit('update:modelValue', value),
 });
 
-const showFertilizerSelector = ref(false);
-const showTreatmentSelector = ref(false);
-const showProblemsSelector = ref(false);
-
 const form = ref<any>({
   date: '',
   volume: null,
@@ -262,51 +87,16 @@ const form = ref<any>({
   problems: '',
 });
 
-const selectedProblems = ref<PlantProblem[]>([]);
-
-// Элементы для удобрений
-const macroElements = [
-  { symbol: 'N', name: 'Азот' },
-  { symbol: 'P', name: 'Фосфор' },
-  { symbol: 'K', name: 'Калий' },
-  { symbol: 'Ca', name: 'Кальций' },
-  { symbol: 'Mg', name: 'Магний' },
-  { symbol: 'S', name: 'Сера' },
-];
-
-const microElements = [
-  { symbol: 'Fe', name: 'Железо' },
-  { symbol: 'Mn', name: 'Марганец' },
-  { symbol: 'Zn', name: 'Цинк' },
-  { symbol: 'Cu', name: 'Медь' },
-  { symbol: 'B', name: 'Бор' },
-  { symbol: 'Mo', name: 'Молибден' },
-  { symbol: 'Cl', name: 'Хлор' },
-  { symbol: 'Co', name: 'Кобальт' },
-  { symbol: 'Ni', name: 'Никель' },
-  { symbol: 'Si', name: 'Кремний' },
-];
-
-// Константы
-const leafConditions = [
-  'Отличное',
-  'Хорошее',
-  'Нормальное',
-  'Плохое',
-  'Очень плохое',
-  'Болезнь',
-  'Вредители',
-];
-
 // Вычисляемые свойства
 const dialogTitle = computed(() => {
   const action = props.entry ? 'Редактировать' : 'Добавить';
-  const typeName = {
-    watering: 'полив',
-    fertilizing: 'удобрение',
-    treatment: 'обработку',
-    observation: 'наблюдение',
-  }[props.type];
+  const typeName =
+    {
+      watering: 'полив',
+      fertilizing: 'удобрение',
+      treatment: 'обработку',
+      observation: 'наблюдение',
+    }[props.type] || 'запись';
 
   return `${action} ${typeName}`;
 });
@@ -318,11 +108,6 @@ function initializeForm() {
   if (props.entry) {
     // Редактирование существующей записи
     form.value = { ...props.entry };
-    // Инициализируем выбранные проблемы для наблюдений
-    if (props.type === 'observation' && props.entry.problems) {
-      selectedProblems.value = props.entry.problems;
-      updateProblemsField();
-    }
   } else {
     // Новая запись
     form.value = {
@@ -336,50 +121,11 @@ function initializeForm() {
       composition: {},
       problems: '',
     };
-    selectedProblems.value = [];
   }
 }
 
-function selectFertilizer(fertilizer: Fertilizer) {
-  form.value.note = fertilizer.name;
-  form.value.composition = { ...fertilizer.composition };
-  showFertilizerSelector.value = false;
-}
-
-function selectTreatment(treatment: TreatmentAgent) {
-  form.value.agent = treatment.name;
-  showTreatmentSelector.value = false;
-}
-
-function selectProblem(problem: PlantProblem) {
-  // Проверяем, не выбрана ли уже эта проблема
-  if (!selectedProblems.value.find((p) => p.id === problem.id)) {
-    selectedProblems.value.push(problem);
-    updateProblemsField();
-  }
-  showProblemsSelector.value = false;
-}
-
-function removeProblem(problemId: string) {
-  const index = selectedProblems.value.findIndex((p) => p.id === problemId);
-  if (index !== -1) {
-    selectedProblems.value.splice(index, 1);
-    updateProblemsField();
-  }
-}
-
-function updateProblemsField() {
-  form.value.problems = selectedProblems.value.map((p) => p.name).join(', ');
-}
-
-function getSeverityColor(severity: PlantProblem['severity']) {
-  const colors = {
-    low: 'green',
-    medium: 'orange',
-    high: 'red',
-    critical: 'purple',
-  };
-  return colors[severity];
+function updateForm(newValue: any) {
+  form.value = { ...newValue };
 }
 
 function saveEntry() {
@@ -464,9 +210,7 @@ function saveEntry() {
     cleanEntry.leafCondition = form.value.leafCondition;
     cleanEntry.note = form.value.note;
     if (form.value.height) cleanEntry.height = form.value.height;
-    if (selectedProblems.value.length > 0) {
-      cleanEntry.problems = selectedProblems.value;
-    }
+    if (form.value.problems) cleanEntry.problems = form.value.problems;
   }
 
   // Эмитим событие сохранения

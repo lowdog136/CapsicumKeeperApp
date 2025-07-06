@@ -27,59 +27,7 @@
       <!-- Информация о сорте -->
       <div class="q-mb-sm">
         <span class="text-subtitle2">Сорт: </span>{{ pepper.variety }}
-
-        <!-- Информация о сорте из библиотеки -->
-        <div v-if="pepper.varietyInfo" class="q-mt-xs">
-          <q-card flat bordered class="bg-blue-1">
-            <q-card-section class="q-pa-sm">
-              <div class="row items-center q-gutter-xs q-mb-xs">
-                <q-chip
-                  :color="getHeatLevelInfo(pepper.varietyInfo.heatLevel).color"
-                  text-color="white"
-                  size="sm"
-                  :label="getHeatLevelInfo(pepper.varietyInfo.heatLevel).name"
-                />
-                <q-chip
-                  color="primary"
-                  text-color="white"
-                  size="sm"
-                  :label="pepper.varietyInfo.species"
-                  icon="science"
-                />
-                <q-chip
-                  v-if="pepper.varietyInfo.origin"
-                  color="grey"
-                  text-color="white"
-                  size="sm"
-                  :label="pepper.varietyInfo.origin"
-                />
-              </div>
-              <div class="row q-col-gutter-sm text-caption">
-                <div class="col-6">
-                  <div class="text-grey-6">Высота</div>
-                  <div>
-                    {{ pepper.varietyInfo.plantHeight.min }}-{{
-                      pepper.varietyInfo.plantHeight.max
-                    }}
-                    {{ pepper.varietyInfo.plantHeight.unit }}
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="text-grey-6">Созревание</div>
-                  <div>
-                    {{ pepper.varietyInfo.daysToMaturity.min }}-{{
-                      pepper.varietyInfo.daysToMaturity.max
-                    }}
-                    дней
-                  </div>
-                </div>
-              </div>
-              <div class="text-caption q-mt-xs text-grey-7">
-                Цвета: {{ pepper.varietyInfo.color.join(', ') }}
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
+        <PepperVarietyInfo :pepper="pepper" />
       </div>
 
       <!-- Описание -->
@@ -120,29 +68,7 @@
       </div>
 
       <!-- Краткая статистика -->
-      <div class="row q-col-gutter-sm q-mb-sm">
-        <div class="col-4">
-          <div class="text-caption text-grey-6">Поливов</div>
-          <div class="text-body2">{{ pepper.wateringHistory?.length || 0 }}</div>
-        </div>
-        <div class="col-4">
-          <div class="text-caption text-grey-6">Удобрений</div>
-          <div class="text-body2">{{ pepper.fertilizingHistory?.length || 0 }}</div>
-        </div>
-        <div class="col-4">
-          <div class="text-caption text-grey-6">Наблюдений</div>
-          <div class="text-body2">{{ pepper.observationLog?.length || 0 }}</div>
-        </div>
-      </div>
-
-      <!-- Последние действия -->
-      <div v-if="lastWatering || lastFertilizing" class="q-mb-sm">
-        <div class="text-caption text-grey-6">Последние действия</div>
-        <div class="text-body2">
-          <div v-if="lastWatering">Полив: {{ formatDate(lastWatering.date) }}</div>
-          <div v-if="lastFertilizing">Удобрение: {{ formatDate(lastFertilizing.date) }}</div>
-        </div>
-      </div>
+      <PepperCardStats :pepper="pepper" />
     </q-card-section>
 
     <q-separator />
@@ -162,34 +88,14 @@
     </q-card-actions>
 
     <!-- Диалог удаления -->
-    <q-dialog v-model="showDeleteDialog">
-      <q-card>
-        <q-card-section class="row items-center">
-          <q-avatar icon="warning" color="red" text-color="white" />
-          <span class="q-ml-sm">Вы уверены, что хотите удалить "{{ pepper.name }}"?</span>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Отмена" color="primary" v-close-popup />
-          <q-btn flat label="Удалить" color="red" @click="confirmDelete" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <DeletePepperDialog
+      v-model="showDeleteDialog"
+      :pepper-name="pepper.name"
+      @confirm="confirmDelete"
+    />
 
     <!-- Диалог изменения стадии -->
-    <q-dialog v-model="showStageDialog">
-      <q-card>
-        <q-card-section>
-          <div class="text-h6">Изменить стадию роста</div>
-        </q-card-section>
-        <q-card-section>
-          <q-select v-model="newStage" :options="stages" label="Новая стадия" outlined />
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Отмена" color="primary" v-close-popup />
-          <q-btn flat label="Сохранить" color="primary" @click="saveStage" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <ChangeStageDialog v-model="showStageDialog" :current-stage="pepper.stage" @save="saveStage" />
 
     <!-- Новые компоненты -->
     <PepperDetailsDialog v-model="showDetails" :pepper="pepper" />
@@ -226,6 +132,10 @@ import type { Pepper, HeatLevel } from './models';
 import PepperDetailsDialog from './PepperDetailsDialog.vue';
 import PepperHistoryManager from './PepperHistoryManager.vue';
 import PepperQuickActions from './PepperQuickActions.vue';
+import PepperVarietyInfo from './PepperVarietyInfo.vue';
+import PepperCardStats from './PepperCardStats.vue';
+import DeletePepperDialog from './DeletePepperDialog.vue';
+import ChangeStageDialog from './ChangeStageDialog.vue';
 
 const props = defineProps<{ pepper: Pepper }>();
 const emit = defineEmits<{

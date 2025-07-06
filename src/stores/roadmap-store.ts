@@ -367,294 +367,95 @@ export const useRoadmapStore = defineStore('roadmap', () => {
 
   // Создать примеры элементов дорожной карты
   const createSampleItems = async () => {
-    console.log('=== Создание примеров элементов дорожной карты ===');
+    console.log('=== Начало создания примеров элементов дорожной карты ===');
 
-    const sampleItems = [
-      {
-        title: 'Исправить функционал избранного',
-        description: 'Восстановить работу кнопков избранного в карточках перцев и сортов',
-        priority: 'high' as const,
-        status: 'planned' as const,
-        category: 'bugfix' as const,
-        targetVersion: '1.1.0',
-        notes: 'Проблема с обновлением состояния избранного в реальном времени',
-        estimatedEffort: 'medium' as const,
-      },
-      {
-        title: 'Экспорт данных',
-        description: 'Возможность экспортировать данные о перцах в CSV/Excel формате с фильтрами',
-        category: 'feature' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.4.0',
-        notes: 'Включить выбор полей для экспорта и настройки формата',
-      },
-      {
-        title: 'Импорт данных',
-        description: 'Возможность импортировать данные о перцах из CSV/Excel файлов',
-        category: 'feature' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '1.5.0',
-        notes: 'Добавить валидацию данных и предварительный просмотр',
-      },
-      {
-        title: 'Календарь посадок',
-        description: 'Календарный вид для планирования посадок и отслеживания сезонных работ',
-        category: 'feature' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '1.6.0',
-        notes: 'Интеграция с климатическими зонами и рекомендациями по посадке',
-      },
-      {
-        title: 'Статистика и аналитика',
-        description: 'Подробная статистика по урожайности, успешности сортов, графики и отчеты',
-        category: 'feature' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '1.7.0',
-        notes: 'Включить сравнение сортов, тренды и рекомендации',
-      },
-      {
-        title: 'Социальные функции',
-        description: 'Возможность делиться результатами, обмениваться семенами, комментировать',
-        category: 'feature' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '2.0.0',
-        notes: 'Создать сообщество садоводов-любителей перцев',
-      },
-      {
-        title: 'Мобильное приложение',
-        description: 'Нативное мобильное приложение для iOS и Android',
-        category: 'feature' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '2.1.0',
-        notes: 'Использовать Capacitor или React Native для разработки',
-      },
-      {
-        title: 'Офлайн режим',
-        description:
-          'Возможность работы с приложением без интернета с синхронизацией при подключении',
-        category: 'feature' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '1.8.0',
-        notes: 'Использовать Service Workers и IndexedDB для кэширования',
-      },
-      {
-        title: 'Система тегов',
-        description: 'Добавить возможность тегирования перцев для лучшей организации',
-        category: 'feature' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'small' as const,
-        targetVersion: '1.9.0',
-        notes: 'Пользовательские теги и предустановленные категории',
-      },
-      {
-        title: 'Поиск и фильтры',
-        description: 'Улучшить поиск по перцам с расширенными фильтрами и сортировкой',
-        category: 'improvement' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.2.0',
-        notes: 'Добавить поиск по описанию, датам, сортам',
-      },
-      {
-        title: 'Множественное редактирование',
-        description: 'Возможность редактировать несколько перцев одновременно',
-        category: 'improvement' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.3.0',
-        notes: 'Batch операции для массового обновления',
-      },
-      {
-        title: 'Резервное копирование',
-        description: 'Автоматическое резервное копирование данных в облако',
-        category: 'feature' as const,
-        priority: 'high' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.4.0',
-        notes: 'Интеграция с Google Drive, Dropbox или собственным облаком',
-      },
-      {
-        title: 'Восстановление данных',
-        description: 'Функция восстановления данных из резервных копий',
-        category: 'feature' as const,
-        priority: 'high' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.4.0',
-        notes: 'Предварительный просмотр изменений перед восстановлением',
-      },
-      {
-        title: 'Система ролей',
-        description: 'Добавить роли пользователей (админ, модератор, пользователь)',
-        category: 'feature' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '2.0.0',
-        notes: 'Управление контентом и модерация пользовательского контента',
-      },
-      {
-        title: 'API для интеграций',
-        description: 'Создать REST API для интеграции с другими сервисами',
-        category: 'feature' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '2.2.0',
-        notes: 'Документация API и примеры интеграций',
-      },
-      {
-        title: 'Интеграция с погодными сервисами',
-        description: 'Автоматические рекомендации по уходу на основе погоды',
-        category: 'feature' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.6.0',
-        notes: 'Интеграция с OpenWeatherMap или подобными сервисами',
-      },
-      {
-        title: 'Система достижений',
-        description: 'Геймификация с достижениями за успешное выращивание перцев',
-        category: 'feature' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '2.0.0',
-        notes: 'Бейджи, уровни, рейтинги среди пользователей',
-      },
-      {
-        title: 'Чат поддержки',
-        description: 'Встроенный чат для связи с поддержкой пользователей',
-        category: 'feature' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '2.1.0',
-        notes: 'Интеграция с Zendesk или подобными сервисами',
-      },
-      {
-        title: 'Многоязычность',
-        description: 'Поддержка нескольких языков (английский, испанский, французский)',
-        category: 'improvement' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '1.8.0',
-        notes: 'Локализация интерфейса и контента',
-      },
-      {
-        title: 'Темная тема',
-        description: 'Добавить темную тему для комфортного использования в вечернее время',
-        category: 'ui' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'small' as const,
-        targetVersion: '1.3.0',
-        notes: 'Автоматическое переключение по времени суток',
-      },
-      {
-        title: 'Улучшить мобильную версию',
-        description: 'Оптимизировать интерфейс для мобильных устройств',
-        category: 'ui' as const,
-        priority: 'high' as const,
-        status: 'in-progress' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '1.2.0',
-        notes: 'Добавить свайп-жесты и улучшить навигацию',
-      },
-      {
-        title: 'Исправить баг с загрузкой фото',
-        description: 'Исправить проблему с загрузкой фотографий на медленном интернете',
-        category: 'bugfix' as const,
-        priority: 'critical' as const,
-        status: 'completed' as const,
-        estimatedEffort: 'small' as const,
-        targetVersion: '1.1.1',
-        notes: 'Добавить прогресс-бар и обработку ошибок',
-      },
-      {
-        title: 'Оптимизировать запросы к базе данных',
-        description: 'Улучшить производительность запросов к Firestore',
-        category: 'backend' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.2.0',
-        notes: 'Добавить кэширование и пагинацию',
-      },
-      {
-        title: 'Улучшить безопасность',
-        description: 'Добавить двухфакторную аутентификацию и улучшить безопасность',
-        category: 'backend' as const,
-        priority: 'high' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.5.0',
-        notes: '2FA, аудит действий, шифрование чувствительных данных',
-      },
-      {
-        title: 'Система логирования',
-        description: 'Добавить подробное логирование для отладки и мониторинга',
-        category: 'backend' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.6.0',
-        notes: 'Интеграция с Sentry или подобными сервисами',
-      },
-      {
-        title: 'Автоматические тесты',
-        description: 'Добавить unit и integration тесты для повышения качества кода',
-        category: 'backend' as const,
-        priority: 'medium' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'large' as const,
-        targetVersion: '1.7.0',
-        notes: 'Jest для unit тестов, Cypress для e2e тестов',
-      },
-      {
-        title: 'CI/CD пайплайн',
-        description: 'Настроить автоматическое развертывание и тестирование',
-        category: 'backend' as const,
-        priority: 'low' as const,
-        status: 'planned' as const,
-        estimatedEffort: 'medium' as const,
-        targetVersion: '1.8.0',
-        notes: 'GitHub Actions для автоматического деплоя',
-      },
-    ];
+    if (!userStore.user) {
+      error.value = 'Пользователь не авторизован';
+      console.error('❌ Пользователь не авторизован');
+      return;
+    }
+
+    // Проверяем права на редактирование
+    if (userStore.user.email !== 'lowdog136@gmail.com') {
+      error.value = 'У вас нет прав на создание примеров';
+      console.error('❌ Пользователь не имеет прав на редактирование:', userStore.user.email);
+      return;
+    }
 
     loading.value = true;
     error.value = null;
 
     try {
+      const now = new Date().toISOString();
+      const sampleItems = [
+        {
+          title: 'Рефакторинг компонента PepperForm',
+          description:
+            'Разделить монолитный компонент PepperForm (734 строки) на более мелкие специализированные компоненты для улучшения читаемости и поддерживаемости кода',
+          category: 'improvement' as const,
+          priority: 'high' as const,
+          status: 'in-progress' as const,
+          estimatedEffort: 'medium' as const,
+          targetVersion: 'v3.2.0',
+          notes:
+            'Компонент слишком большой и сложный. Нужно разделить на: PepperBasicInfo, PepperPlantingInfo, PepperWateringHistory, PepperFertilizerHistory, PepperSoilInfo',
+          assignee: userStore.user.email!,
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          title: 'Рефакторинг PepperHistoryManager',
+          description:
+            'Разделить компонент PepperHistoryManager (537 строк) на более мелкие компоненты для устранения дублирования кода между табами',
+          category: 'improvement' as const,
+          priority: 'medium' as const,
+          status: 'planned' as const,
+          estimatedEffort: 'small' as const,
+          targetVersion: 'v3.3.0',
+          notes:
+            'Много дублирования кода между табами истории. Создать общие компоненты: HistoryTabPanel, HistoryEntryCard, EmptyHistoryState',
+          assignee: userStore.user.email!,
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          title: 'Рефакторинг VarietySelector',
+          description:
+            'Упростить компонент VarietySelector (530 строк) путем разделения логики для v1 и v2 библиотек сортов',
+          category: 'improvement' as const,
+          priority: 'medium' as const,
+          status: 'planned' as const,
+          estimatedEffort: 'small' as const,
+          targetVersion: 'v3.4.0',
+          notes:
+            'Сложная логика с двумя версиями библиотеки. Создать: VarietySearchFilters, VarietyInfoDialog',
+          assignee: userStore.user.email!,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ];
+
+      console.log('📝 Создаем примеры элементов...');
+
       for (const item of sampleItems) {
-        await addItem(item);
+        const docRef = await addDoc(collection(db, 'roadmap'), item);
+        console.log('✅ Создан элемент с ID:', docRef.id);
       }
+
+      console.log('✅ Все примеры элементов созданы успешно');
     } catch (err) {
-      console.error('Ошибка при создании примеров:', err);
-      error.value = 'Ошибка при создании примеров';
+      console.error('❌ Ошибка при создании примеров:', err);
+      console.error('❌ Тип ошибки:', typeof err);
+      console.error(
+        '❌ Сообщение ошибки:',
+        err instanceof Error ? err.message : 'Неизвестная ошибка',
+      );
+      console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
+
+      error.value = `Ошибка при создании примеров: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
     } finally {
       loading.value = false;
+      console.log('=== Конец создания примеров элементов дорожной карты ===');
     }
   };
 
