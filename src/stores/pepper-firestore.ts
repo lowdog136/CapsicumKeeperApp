@@ -241,13 +241,47 @@ export const usePepperFirestore = defineStore('pepperFirestore', {
 
     async updatePepper(id: string, pepper: Partial<Pepper>) {
       try {
+        // Очищаем объект от undefined значений и id
+        const cleanPepper = Object.fromEntries(
+          Object.entries(pepper).filter(([key, value]) => {
+            // Исключаем id и undefined значения
+            if (key === 'id' || value === undefined) return false;
+
+            // Для массивов проверяем, что они не пустые или содержат валидные элементы
+            if (Array.isArray(value)) {
+              return value.length > 0;
+            }
+
+            // Для объектов проверяем, что они не пустые или содержат валидные свойства
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+              const hasValidProps = Object.values(value).some((v) => v !== undefined && v !== null);
+              return hasValidProps;
+            }
+
+            return value !== null;
+          }),
+        );
+
+        // Проверяем, есть ли что обновлять
+        if (Object.keys(cleanPepper).length === 0) {
+          console.warn('No valid data to update');
+          return;
+        }
+
         const updateData = {
-          ...pepper,
+          ...cleanPepper,
           updatedAt: new Date().toISOString(),
         };
 
+        console.log('Updating pepper with data:', updateData);
+
         await updateDoc(doc(db, 'peppers', id), updateData);
-        await this.fetchPeppers();
+
+        // Обновляем локальное состояние без перезагрузки всех данных
+        const index = this.peppers.findIndex((p) => p.id === id);
+        if (index !== -1) {
+          this.peppers[index] = { ...this.peppers[index], ...cleanPepper } as Pepper;
+        }
       } catch (error) {
         console.error('Error updating pepper:', error);
         throw error;

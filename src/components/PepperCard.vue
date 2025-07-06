@@ -5,24 +5,29 @@
       :alt="pepper.name"
       style="height: 200px; object-fit: cover"
     />
+
     <q-card-section>
-      <div class="row items-center q-mb-sm">
-        <div class="text-h6 q-mr-sm" v-if="!editMode">{{ pepper.name }}</div>
-        <q-input
-          v-else
-          v-model="editForm.name"
-          label="Наименование"
-          dense
-          outlined
-          class="q-mr-sm"
-        />
-        <q-badge color="positive" class="q-ml-sm">{{ pepper.id }}</q-badge>
-        <q-btn flat icon="edit" size="sm" @click="toggleEditMode" v-if="!editMode" />
-        <q-btn flat icon="save" size="sm" color="positive" @click="saveEdit" v-if="editMode" />
-        <q-btn flat icon="close" size="sm" color="negative" @click="cancelEdit" v-if="editMode" />
+      <!-- Заголовок и основные действия -->
+      <div class="row items-center justify-between q-mb-sm">
+        <div class="text-h6">{{ pepper.name }}</div>
+        <div class="row items-center q-gutter-xs">
+          <q-badge color="positive" size="sm">{{ pepper.id }}</q-badge>
+          <q-btn flat round icon="edit" size="sm" @click="editPepper" />
+          <q-btn
+            flat
+            round
+            icon="delete"
+            size="sm"
+            color="negative"
+            @click="showDeleteDialog = true"
+          />
+        </div>
       </div>
-      <div class="q-mb-xs" v-if="!editMode">
+
+      <!-- Информация о сорте -->
+      <div class="q-mb-sm">
         <span class="text-subtitle2">Сорт: </span>{{ pepper.variety }}
+
         <!-- Информация о сорте из библиотеки -->
         <div v-if="pepper.varietyInfo" class="q-mt-xs">
           <q-card flat bordered class="bg-blue-1">
@@ -76,146 +81,77 @@
           </q-card>
         </div>
       </div>
-      <q-input v-else v-model="editForm.variety" label="Сорт" dense outlined class="q-mb-xs" />
-      <div class="q-mb-xs" v-if="!editMode">
+
+      <!-- Описание -->
+      <div class="q-mb-sm">
         <span>{{ pepper.description }}</span>
       </div>
-      <q-input
-        v-else
-        v-model="editForm.description"
-        label="Описание"
-        type="textarea"
-        dense
-        outlined
-        class="q-mb-xs"
-      />
-      <div class="q-mb-xs" v-if="!editMode"><span>Фото: </span>{{ pepper.photoUrl }}</div>
-      <div v-else class="q-mb-xs">
-        <div class="text-subtitle2 q-mb-xs">Фото перца</div>
-        <ImageUpload
-          v-model="editForm.photoUrl"
-          alt="Фото перца"
-          @upload-complete="handleImageUploadComplete"
-          @upload-error="handleImageUploadError"
-        />
+
+      <!-- Основная информация -->
+      <div class="row q-col-gutter-sm q-mb-sm">
+        <div class="col-6">
+          <div class="text-caption text-grey-6">Дата посадки</div>
+          <div class="text-body2">{{ formatDate(pepper.plantingDate) }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-caption text-grey-6">Растет</div>
+          <div class="text-body2">{{ daysSincePlanting }} дн.</div>
+        </div>
       </div>
-      <div class="q-mb-xs" v-if="!editMode">
-        <span>Дата посадки: </span>{{ pepper.plantingDate }}
+
+      <!-- Место посадки -->
+      <div class="q-mb-sm">
+        <div class="text-caption text-grey-6">Место посадки</div>
+        <div class="text-body2">{{ locationText }}</div>
       </div>
-      <q-input
-        v-else
-        v-model="editForm.plantingDate"
-        label="Дата посадки"
-        type="date"
-        dense
-        outlined
-        class="q-mb-xs"
-      />
-      <div class="q-mb-xs row items-center" v-if="!editMode">
-        <span>Место посадки: </span>{{ locationText }}
-        <template v-if="pepper.location?.type === 'горшок'">
-          <SoilExtrasInline v-model="localSoilExtras" />
-        </template>
-      </div>
+
       <!-- Стадия роста -->
-      <div class="q-mb-xs row items-center">
-        <q-icon name="local_florist" color="orange" size="22px" class="q-mr-sm" />
-        <span v-if="!editMode">Стадия роста: {{ pepper.stage }}</span>
-        <q-select
-          v-else
-          v-model="editForm.stage"
-          :options="stages"
-          dense
-          outlined
-          class="q-mb-xs"
-        />
-      </div>
-      <!-- Растение растет и количество дней -->
-      <div class="q-mt-xs row items-center">
-        <q-icon name="eco" color="green" size="24px" class="q-mr-sm" />
-        <span>Растение растет: {{ daysSincePlanting }} дн.</span>
+      <div class="q-mb-sm">
+        <div class="text-caption text-grey-6">Стадия роста</div>
+        <div class="row items-center q-gutter-sm">
+          <q-chip
+            :color="getStageColor(pepper.stage)"
+            text-color="white"
+            size="sm"
+            :label="pepper.stage"
+          />
+          <q-btn flat round icon="edit" size="xs" @click="changeStage" />
+        </div>
       </div>
 
-      <!-- Полив -->
-      <div class="q-mt-sm">
-        <div>Последний полив: {{ lastWatering?.date || '-' }}</div>
-        <PepperHistoryList
-          :items="editMode ? pepper.wateringHistory : limitedWateringHistory"
-          type="watering"
-          @add="(entry) => handleHistoryAdd('watering', entry)"
-          @edit="(idx, entry) => handleHistoryEdit('watering', idx, entry)"
-          @delete="(idx) => handleHistoryDelete('watering', idx)"
-        />
+      <!-- Краткая статистика -->
+      <div class="row q-col-gutter-sm q-mb-sm">
+        <div class="col-4">
+          <div class="text-caption text-grey-6">Поливов</div>
+          <div class="text-body2">{{ pepper.wateringHistory?.length || 0 }}</div>
+        </div>
+        <div class="col-4">
+          <div class="text-caption text-grey-6">Удобрений</div>
+          <div class="text-body2">{{ pepper.fertilizingHistory?.length || 0 }}</div>
+        </div>
+        <div class="col-4">
+          <div class="text-caption text-grey-6">Наблюдений</div>
+          <div class="text-body2">{{ pepper.observationLog?.length || 0 }}</div>
+        </div>
       </div>
 
-      <!-- Удобрения -->
-      <div class="q-mt-sm">
-        <div>Последние удобрения:</div>
-        <PepperHistoryList
-          :items="editMode ? pepper.fertilizingHistory : limitedFertilizingHistory"
-          type="fertilizing"
-          @add="(entry) => handleHistoryAdd('fertilizing', entry)"
-          @edit="(idx, entry) => handleHistoryEdit('fertilizing', idx, entry)"
-          @delete="(idx) => handleHistoryDelete('fertilizing', idx)"
-        />
-      </div>
-
-      <!-- Обработка -->
-      <div class="q-mt-sm">
-        <div>Последняя обработка: {{ lastTreatment?.date || '-' }}</div>
-        <PepperHistoryList
-          :items="editMode ? pepper.treatmentHistory || [] : limitedTreatmentHistory"
-          type="treatment"
-          @add="(entry) => handleHistoryAdd('treatment', entry)"
-          @edit="(idx, entry) => handleHistoryEdit('treatment', idx, entry)"
-          @delete="(idx) => handleHistoryDelete('treatment', idx)"
-        />
-      </div>
-
-      <!-- Дневник наблюдений -->
-      <div class="q-mt-sm">
-        <div>Последнее наблюдение: {{ lastObservation?.date || '-' }}</div>
-        <PepperHistoryList
-          :items="editMode ? pepper.observationLog || [] : limitedObservationHistory"
-          type="observation"
-          @add="(entry) => handleHistoryAdd('observation', entry)"
-          @edit="(idx, entry) => handleHistoryEdit('observation', idx, entry)"
-          @delete="(idx) => handleHistoryDelete('observation', idx)"
-        />
-      </div>
-
-      <!-- История стадий роста -->
-      <div class="q-mt-sm" v-if="pepper.stageHistory && pepper.stageHistory.length">
-        <div class="text-subtitle2">История стадий роста</div>
-        <q-list dense>
-          <q-item
-            v-for="(item, idx) in editMode ? pepper.stageHistory : limitedStageHistory"
-            :key="idx"
-          >
-            <q-item-section>{{ item.date }} — {{ item.stage }}</q-item-section>
-          </q-item>
-        </q-list>
-      </div>
-
-      <!-- История мест посадки -->
-      <div class="q-mt-sm" v-if="pepper.locationHistory && pepper.locationHistory.length">
-        <div class="text-subtitle2">История мест посадки</div>
-        <q-list dense>
-          <q-item
-            v-for="(item, idx) in editMode ? pepper.locationHistory : limitedLocationHistory"
-            :key="idx"
-          >
-            <q-item-section
-              >{{ item.date }} — {{ item.type
-              }}<span v-if="item.potVolume"> ({{ item.potVolume }})</span></q-item-section
-            >
-          </q-item>
-        </q-list>
+      <!-- Последние действия -->
+      <div v-if="lastWatering || lastFertilizing" class="q-mb-sm">
+        <div class="text-caption text-grey-6">Последние действия</div>
+        <div class="text-body2">
+          <div v-if="lastWatering">Полив: {{ formatDate(lastWatering.date) }}</div>
+          <div v-if="lastFertilizing">Удобрение: {{ formatDate(lastFertilizing.date) }}</div>
+        </div>
       </div>
     </q-card-section>
+
     <q-separator />
+
     <q-card-actions align="right">
-      <q-btn flat color="positive" label="Подробно" @click="showDetails = true" class="q-mr-auto" />
+      <q-btn flat round color="primary" icon="info" @click="showDetails = true" class="q-mr-auto" />
+      <q-btn flat round color="info" icon="analytics" @click="showCharts = true" />
+      <q-btn flat round color="secondary" icon="history" @click="showHistory = true" />
+      <q-btn flat round color="accent" icon="flash_on" @click="showQuickActions = true" />
       <q-btn
         flat
         round
@@ -223,222 +159,132 @@
         :icon="pepper.isFavorite ? 'star' : 'star_border'"
         @click="toggleFavorite"
       />
-      <q-btn flat round color="red" icon="delete" @click="showDeleteDialog = true" />
     </q-card-actions>
+
+    <!-- Диалог удаления -->
+    <q-dialog v-model="showDeleteDialog">
+      <q-card>
+        <q-card-section class="row items-center">
+          <q-avatar icon="warning" color="red" text-color="white" />
+          <span class="q-ml-sm">Вы уверены, что хотите удалить "{{ pepper.name }}"?</span>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Отмена" color="primary" v-close-popup />
+          <q-btn flat label="Удалить" color="red" @click="confirmDelete" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Диалог изменения стадии -->
+    <q-dialog v-model="showStageDialog">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">Изменить стадию роста</div>
+        </q-card-section>
+        <q-card-section>
+          <q-select v-model="newStage" :options="stages" label="Новая стадия" outlined />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Отмена" color="primary" v-close-popup />
+          <q-btn flat label="Сохранить" color="primary" @click="saveStage" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Новые компоненты -->
+    <PepperDetailsDialog v-model="showDetails" :pepper="pepper" />
+
+    <PepperHistoryManager v-model="showHistory" :pepper="pepper" @update="handleUpdate" />
+
+    <PepperQuickActions v-model="showQuickActions" :pepper="pepper" @update="handleUpdate" />
+
+    <!-- Заглушка для графиков -->
+    <q-dialog v-model="showCharts">
+      <q-card style="min-width: 600px">
+        <q-card-section>
+          <div class="text-h6">Графики роста "{{ pepper.name }}"</div>
+        </q-card-section>
+        <q-card-section class="text-center q-pa-xl">
+          <q-icon name="analytics" size="100px" color="grey-4" />
+          <div class="text-h6 q-mt-md text-grey-6">Графики в разработке</div>
+          <div class="text-body2 text-grey-5 q-mt-sm">
+            Здесь будут отображаться графики роста, полива и удобрений
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Закрыть" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-card>
-
-  <q-dialog v-model="showDeleteDialog">
-    <q-card>
-      <q-card-section class="row items-center">
-        <q-avatar icon="warning" color="red" text-color="white" />
-        <span class="q-ml-sm">Вы уверены, что хотите удалить карточку "{{ pepper.name }}"?</span>
-      </q-card-section>
-
-      <q-card-actions align="right">
-        <q-btn flat label="Отмена" color="positive" v-close-popup />
-        <q-btn flat label="Удалить" color="red" @click="confirmDelete" v-close-popup />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
-
-  <q-dialog v-model="showDetails" persistent>
-    <q-card style="min-width: 400px; max-width: 90vw; max-height: 90vh; overflow-y: auto">
-      <q-carousel
-        v-model="detailsSlide"
-        animated
-        swipeable
-        control-type="flat"
-        arrows
-        navigation
-        infinite
-        height="auto"
-      >
-        <q-carousel-slide name="details">
-          <q-card-section>
-            <div class="text-h6">
-              Подробная информация о {{ props.pepper.name }} ({{ props.pepper.id }})
-            </div>
-            <div class="q-mt-md">
-              <div><b>Сорт:</b> {{ props.pepper.variety }}</div>
-              <div><b>Дата посева:</b> {{ props.pepper.plantingDate }}</div>
-              <div><b>Текущая стадия:</b> {{ props.pepper.stage }}</div>
-              <div>
-                <b>Текущая локация:</b> {{ props.pepper.location.type
-                }}<span v-if="props.pepper.location.potVolume">
-                  ({{ props.pepper.location.potVolume }})</span
-                >
-              </div>
-            </div>
-            <q-separator class="q-my-md" />
-            <div>
-              <div class="text-subtitle2 q-mb-xs">История поливов</div>
-              <q-list dense bordered>
-                <q-item v-for="(w, i) in props.pepper.wateringHistory" :key="i">
-                  <q-item-section>{{ w.date }} — {{ w.volume }} мл</q-item-section>
-                </q-item>
-                <q-item
-                  v-if="!props.pepper.wateringHistory || !props.pepper.wateringHistory.length"
-                >
-                  <q-item-section>Нет записей</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-            <div class="q-mt-md">
-              <div class="text-subtitle2 q-mb-xs">История удобрений</div>
-              <q-list dense bordered>
-                <q-item v-for="(f, i) in props.pepper.fertilizingHistory" :key="i">
-                  <q-item-section>
-                    <span class="text-primary">{{ f.date }}</span> —
-                    {{ f.grams ? f.grams + ' г' : '' }} {{ f.note }}
-                    <template v-if="f.composition && Object.keys(f.composition).length">
-                      <span
-                        v-if="f.composition.N || f.composition.P || f.composition.K"
-                        class="q-ml-sm"
-                        >NPK:
-                        <span v-if="f.composition.N">N: {{ f.composition.N }}</span>
-                        <span v-if="f.composition.P"> P: {{ f.composition.P }}</span>
-                        <span v-if="f.composition.K"> K: {{ f.composition.K }}</span>
-                      </span>
-                      <span
-                        v-if="
-                          f.composition.Fe ||
-                          f.composition.Mn ||
-                          f.composition.B ||
-                          f.composition.Na ||
-                          f.composition.Zn ||
-                          f.composition.Cu ||
-                          f.composition.Mo ||
-                          f.composition.Cl ||
-                          f.composition.Ni ||
-                          f.composition.Si
-                        "
-                        class="q-ml-sm"
-                        >Микроэлементы:
-                        <span v-if="f.composition.Fe">Fe: {{ f.composition.Fe }}</span>
-                        <span v-if="f.composition.Mn"> Mn: {{ f.composition.Mn }}</span>
-                        <span v-if="f.composition.B"> B: {{ f.composition.B }}</span>
-                        <span v-if="f.composition.Na"> Na: {{ f.composition.Na }}</span>
-                        <span v-if="f.composition.Zn"> Zn: {{ f.composition.Zn }}</span>
-                        <span v-if="f.composition.Cu"> Cu: {{ f.composition.Cu }}</span>
-                        <span v-if="f.composition.Mo"> Mo: {{ f.composition.Mo }}</span>
-                        <span v-if="f.composition.Cl"> Cl: {{ f.composition.Cl }}</span>
-                        <span v-if="f.composition.Ni"> Ni: {{ f.composition.Ni }}</span>
-                        <span v-if="f.composition.Si"> Si: {{ f.composition.Si }}</span>
-                      </span>
-                    </template>
-                  </q-item-section>
-                </q-item>
-                <q-item
-                  v-if="!props.pepper.fertilizingHistory || !props.pepper.fertilizingHistory.length"
-                >
-                  <q-item-section>Нет записей</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-            <div class="q-mt-md">
-              <div class="text-subtitle2 q-mb-xs">История обработок</div>
-              <q-list dense bordered>
-                <q-item v-for="(t, i) in props.pepper.treatmentHistory || []" :key="i">
-                  <q-item-section
-                    >{{ t.date }} — {{ t.agent }}
-                    <span v-if="t.volume">({{ t.volume }} мл)</span></q-item-section
-                  >
-                </q-item>
-                <q-item
-                  v-if="!props.pepper.treatmentHistory || !props.pepper.treatmentHistory.length"
-                >
-                  <q-item-section>Нет записей</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-            <div class="q-mt-md">
-              <div class="text-subtitle2 q-mb-xs">Дневник наблюдений</div>
-              <q-list dense bordered>
-                <q-item v-for="(o, i) in props.pepper.observationLog || []" :key="i">
-                  <q-item-section>{{ o.date }} — {{ o.leafCondition }}</q-item-section>
-                </q-item>
-                <q-item v-if="!props.pepper.observationLog || !props.pepper.observationLog.length">
-                  <q-item-section>Нет записей</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-            <div class="q-mt-md">
-              <div class="text-subtitle2 q-mb-xs">История стадий</div>
-              <q-list dense bordered>
-                <q-item v-for="(s, i) in props.pepper.stageHistory" :key="i">
-                  <q-item-section>{{ s.date }} — {{ s.stage }}</q-item-section>
-                </q-item>
-                <q-item v-if="!props.pepper.stageHistory || !props.pepper.stageHistory.length">
-                  <q-item-section>Нет записей</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-            <div class="q-mt-md">
-              <div class="text-subtitle2 q-mb-xs">История локаций</div>
-              <q-list dense bordered>
-                <q-item v-for="(l, i) in props.pepper.locationHistory" :key="i">
-                  <q-item-section
-                    >{{ l.date }} — {{ l.type
-                    }}<span v-if="l.potVolume"> ({{ l.potVolume }})</span></q-item-section
-                  >
-                </q-item>
-                <q-item
-                  v-if="!props.pepper.locationHistory || !props.pepper.locationHistory.length"
-                >
-                  <q-item-section>Нет записей</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn flat label="Статистика" color="positive" @click="detailsSlide = 'stats'" />
-            <q-btn flat label="Закрыть" color="positive" v-close-popup />
-          </q-card-actions>
-        </q-carousel-slide>
-        <q-carousel-slide name="stats">
-          <q-card-section>
-            <div class="text-h6">Статистика по растению</div>
-            <div class="q-mt-md"><b>Всего полито:</b> {{ totalWatered }} мл</div>
-            <div class="q-mt-sm"><b>Всего добавлено удобрений:</b> {{ totalFertilized }} г</div>
-            <div class="q-mt-sm"><b>Количество обработок:</b> {{ totalTreatments }}</div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn flat label="История" color="positive" @click="detailsSlide = 'details'" />
-            <q-btn flat label="Закрыть" color="positive" v-close-popup />
-          </q-card-actions>
-        </q-carousel-slide>
-      </q-carousel>
-    </q-card>
-  </q-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import type {
-  Pepper,
-  WateringEntry,
-  FertilizingEntry,
-  TreatmentEntry,
-  Observation,
-  HeatLevel,
-} from './models';
-import { usePepperFirestore } from 'src/stores/pepper-firestore';
-import SoilExtrasInline from './SoilExtrasInline.vue';
-import PepperHistoryList from './PepperHistoryList.vue';
+import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
-import ImageUpload from './ImageUpload.vue';
+import type { Pepper, HeatLevel } from './models';
+import PepperDetailsDialog from './PepperDetailsDialog.vue';
+import PepperHistoryManager from './PepperHistoryManager.vue';
+import PepperQuickActions from './PepperQuickActions.vue';
 
 const props = defineProps<{ pepper: Pepper }>();
 const emit = defineEmits<{
   (e: 'update:stage', value: Pepper['stage']): void;
   (e: 'delete', id: string): void;
   (e: 'toggle-favorite', id: string): void;
+  (e: 'edit', pepper: Pepper): void;
+  (e: 'update', updates: Partial<Pepper>): void;
 }>();
 
-const pepperFirestore = usePepperFirestore();
 const $q = useQuasar();
 
-// Функция для получения информации об уровне остроты
+// Состояние
+const showDeleteDialog = ref(false);
+const showStageDialog = ref(false);
+const showDetails = ref(false);
+const showHistory = ref(false);
+const showQuickActions = ref(false);
+const showCharts = ref(false);
+const newStage = ref<Pepper['stage']>(props.pepper.stage);
+
+// Константы
+const stages: Pepper['stage'][] = [
+  'проращивание',
+  'рассада',
+  'вегетация',
+  'плодоношение',
+  'сбор урожая',
+];
+
+// Вычисляемые свойства
+const daysSincePlanting = computed(() => {
+  if (!props.pepper.plantingDate) return '-';
+  const plantDate = new Date(props.pepper.plantingDate);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24));
+  return diff >= 0 ? diff : '-';
+});
+
+const locationText = computed(() => {
+  if (props.pepper.location?.type === 'горшок') {
+    return `Горшок, объем: ${props.pepper.location?.potVolume ?? '-'}`;
+  }
+  return props.pepper.location?.type
+    ? props.pepper.location.type.charAt(0).toUpperCase() + props.pepper.location.type.slice(1)
+    : '-';
+});
+
+const lastWatering = computed(() => {
+  const history = props.pepper.wateringHistory;
+  return history && history.length ? history[history.length - 1] : null;
+});
+
+const lastFertilizing = computed(() => {
+  const history = props.pepper.fertilizingHistory;
+  return history && history.length ? history[history.length - 1] : null;
+});
+
+// Методы
 function getHeatLevelInfo(heatLevel: HeatLevel) {
   const heatLevels = {
     'no-heat': { name: 'Без остроты', color: 'green', shuRange: '0 SHU' },
@@ -452,58 +298,25 @@ function getHeatLevelInfo(heatLevel: HeatLevel) {
   return heatLevels[heatLevel] || heatLevels['mild'];
 }
 
-const stages: Pepper['stage'][] = [
-  'проращивание',
-  'рассада',
-  'вегетация',
-  'плодоношение',
-  'сбор урожая',
-];
+function getStageColor(stage: Pepper['stage']) {
+  const colors = {
+    проращивание: 'blue',
+    рассада: 'green',
+    вегетация: 'orange',
+    плодоношение: 'red',
+    'сбор урожая': 'purple',
+  };
+  return colors[stage] || 'grey';
+}
 
-const localStage = ref(props.pepper.stage);
+function formatDate(dateString: string) {
+  if (!dateString) return '-';
+  return new Date(dateString).toLocaleDateString('ru-RU');
+}
 
-watch(
-  () => props.pepper.stage,
-  (val) => {
-    localStage.value = val;
-  },
-);
-
-const lastWatering = computed(() => {
-  const history = props.pepper.wateringHistory;
-  return history && history.length ? history[history.length - 1] : null;
-});
-
-const lastTreatment = computed(() => {
-  const history = props.pepper.treatmentHistory;
-  return history && history.length ? history[history.length - 1] : null;
-});
-
-const lastObservation = computed(() => {
-  const history = props.pepper.observationLog;
-  return history && history.length ? history[history.length - 1] : null;
-});
-
-const showDetails = ref(false);
-const totalWatered = computed(() =>
-  (props.pepper.wateringHistory || []).reduce((sum, w) => sum + (w.volume || 0), 0),
-);
-const totalFertilized = computed(() =>
-  (props.pepper.fertilizingHistory || []).reduce((sum, f) => sum + (f.grams || 0), 0),
-);
-const totalTreatments = computed(() => (props.pepper.treatmentHistory || []).length);
-const detailsSlide = ref<'details' | 'stats'>('details');
-
-const locationText = computed(() => {
-  if (props.pepper.location?.type === 'горшок') {
-    return `Горшок, объем: ${props.pepper.location?.potVolume ?? '-'}`;
-  }
-  return props.pepper.location?.type
-    ? props.pepper.location.type.charAt(0).toUpperCase() + props.pepper.location.type.slice(1)
-    : '-';
-});
-
-const showDeleteDialog = ref(false);
+function editPepper() {
+  emit('edit', props.pepper);
+}
 
 function confirmDelete() {
   emit('delete', props.pepper.id);
@@ -513,259 +326,26 @@ function toggleFavorite() {
   emit('toggle-favorite', props.pepper.id);
 }
 
-const editMode = ref(false);
-type SoilExtras = NonNullable<Pepper['soilExtras']>;
-const editForm = ref({
-  name: props.pepper.name,
-  variety: props.pepper.variety,
-  photoUrl: props.pepper.photoUrl,
-  description: props.pepper.description,
-  stage: props.pepper.stage,
-  plantingDate: props.pepper.plantingDate,
-  location: { ...props.pepper.location },
-  soilExtras: (props.pepper.soilExtras
-    ? { ...props.pepper.soilExtras }
-    : {
-        hasDrainage: false,
-        drainage: null,
-        hasSoilImprovement: false,
-        soilImprovement: null,
-      }) as SoilExtras,
-});
-
-watch(
-  () => props.pepper,
-  (val) => {
-    if (!editMode.value) {
-      editForm.value = {
-        name: val.name,
-        variety: val.variety,
-        photoUrl: val.photoUrl,
-        description: val.description,
-        stage: val.stage,
-        plantingDate: val.plantingDate,
-        location: { ...val.location },
-        soilExtras: (val.soilExtras
-          ? { ...val.soilExtras }
-          : {
-              hasDrainage: false,
-              drainage: null,
-              hasSoilImprovement: false,
-              soilImprovement: null,
-            }) as SoilExtras,
-      };
-    }
-  },
-  { deep: true },
-);
-
-function toggleEditMode() {
-  editMode.value = true;
+function changeStage() {
+  newStage.value = props.pepper.stage;
+  showStageDialog.value = true;
 }
-function cancelEdit() {
-  editMode.value = false;
-  editForm.value = {
-    name: props.pepper.name,
-    variety: props.pepper.variety,
-    photoUrl: props.pepper.photoUrl,
-    description: props.pepper.description,
-    stage: props.pepper.stage,
-    plantingDate: props.pepper.plantingDate,
-    location: { ...props.pepper.location },
-    soilExtras: (props.pepper.soilExtras
-      ? { ...props.pepper.soilExtras }
-      : {
-          hasDrainage: false,
-          drainage: null,
-          hasSoilImprovement: false,
-          soilImprovement: null,
-        }) as SoilExtras,
-  };
-}
-async function saveEdit() {
-  const updatedFields: Partial<Pepper> = {
-    name: editForm.value.name,
-    variety: editForm.value.variety,
-    photoUrl: editForm.value.photoUrl,
-    description: editForm.value.description,
-    plantingDate: editForm.value.plantingDate,
-    location: { ...editForm.value.location },
-    soilExtras: { ...editForm.value.soilExtras },
-  };
-  // --- stage ---
-  if (props.pepper.stage !== editForm.value.stage) {
-    const today = new Date().toISOString().slice(0, 10);
-    const newStageHistory = props.pepper.stageHistory ? [...props.pepper.stageHistory] : [];
-    newStageHistory.push({ date: today, stage: editForm.value.stage });
-    updatedFields.stage = editForm.value.stage;
-    updatedFields.stageHistory = newStageHistory;
+
+function saveStage() {
+  if (newStage.value !== props.pepper.stage) {
+    emit('update:stage', newStage.value);
   }
-  await pepperFirestore.updatePepper(props.pepper.id, updatedFields);
+}
+
+function handleUpdate(updates: Partial<Pepper>) {
+  // Эмитим событие для обновления перца
+  emit('update', updates);
   $q.notify({
     color: 'positive',
     message: 'Изменения сохранены',
-  });
-  editMode.value = false;
-}
-
-// --- Новый универсальный обработчик истории ---
-function handleHistoryAdd(
-  type: 'watering' | 'fertilizing' | 'treatment' | 'observation',
-  entry: WateringEntry | FertilizingEntry | TreatmentEntry | Observation,
-) {
-  const field =
-    type === 'watering'
-      ? 'wateringHistory'
-      : type === 'fertilizing'
-        ? 'fertilizingHistory'
-        : type === 'treatment'
-          ? 'treatmentHistory'
-          : 'observationLog';
-  const arr = [...(props.pepper[field] ?? []), entry];
-  void pepperFirestore.updatePepper(props.pepper.id, { [field]: arr }).then(() => {
-    $q.notify({
-      color: 'positive',
-      message: 'Изменения сохранены',
-    });
+    icon: 'check_circle',
   });
 }
-function handleHistoryEdit(
-  type: 'watering' | 'fertilizing' | 'treatment' | 'observation',
-  idx: number,
-  entry: WateringEntry | FertilizingEntry | TreatmentEntry | Observation,
-) {
-  const field =
-    type === 'watering'
-      ? 'wateringHistory'
-      : type === 'fertilizing'
-        ? 'fertilizingHistory'
-        : type === 'treatment'
-          ? 'treatmentHistory'
-          : 'observationLog';
-  const arr = [...(props.pepper[field] ?? [])];
-  arr[idx] = entry;
-  void pepperFirestore.updatePepper(props.pepper.id, { [field]: arr }).then(() => {
-    $q.notify({
-      color: 'positive',
-      message: 'Изменения сохранены',
-    });
-  });
-}
-function handleHistoryDelete(
-  type: 'watering' | 'fertilizing' | 'treatment' | 'observation',
-  idx: number,
-) {
-  const field =
-    type === 'watering'
-      ? 'wateringHistory'
-      : type === 'fertilizing'
-        ? 'fertilizingHistory'
-        : type === 'treatment'
-          ? 'treatmentHistory'
-          : 'observationLog';
-  const arr = [...(props.pepper[field] ?? [])];
-  arr.splice(idx, 1);
-  void pepperFirestore.updatePepper(props.pepper.id, { [field]: arr }).then(() => {
-    $q.notify({
-      color: 'positive',
-      message: 'Изменения сохранены',
-    });
-  });
-}
-
-const daysSincePlanting = computed(() => {
-  if (!props.pepper.plantingDate) return '-';
-  const plantDate = new Date(props.pepper.plantingDate);
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24));
-  return diff >= 0 ? diff : '-';
-});
-
-const defaultSoilExtras = {
-  hasDrainage: false,
-  drainage: null,
-  hasSoilImprovement: false,
-  soilImprovement: null,
-};
-
-const localSoilExtras = ref<SoilExtras>({ ...(props.pepper.soilExtras ?? defaultSoilExtras) });
-watch(
-  () => props.pepper.soilExtras,
-  (val) => {
-    localSoilExtras.value = { ...(val ?? defaultSoilExtras) };
-  },
-  { immediate: true, deep: true },
-);
-
-let lastSoilExtras = JSON.stringify(props.pepper.soilExtras ?? {});
-watch(
-  localSoilExtras,
-  (val) => {
-    const current = JSON.stringify(val ?? {});
-    if (current !== lastSoilExtras) {
-      lastSoilExtras = current;
-      void pepperFirestore.updatePepper(props.pepper.id, { soilExtras: { ...val } }).then(() => {
-        $q.notify({
-          color: 'positive',
-          message: 'Изменения сохранены',
-        });
-      });
-    }
-  },
-  { deep: true },
-);
-
-const limitedWateringHistory = computed((): WateringEntry[] => {
-  const history = props.pepper.wateringHistory;
-  return history && history.length > 2 ? history.slice(-2) : history || [];
-});
-
-const limitedFertilizingHistory = computed((): FertilizingEntry[] => {
-  const history = props.pepper.fertilizingHistory;
-  return history && history.length > 2 ? history.slice(-2) : history || [];
-});
-
-const limitedTreatmentHistory = computed((): TreatmentEntry[] => {
-  const history = props.pepper.treatmentHistory;
-  return history && history.length > 2 ? history.slice(-2) : history || [];
-});
-
-const limitedObservationHistory = computed((): Observation[] => {
-  const history = props.pepper.observationLog;
-  return history && history.length > 2 ? history.slice(-2) : history || [];
-});
-
-const limitedStageHistory = computed((): { date: string; stage: string }[] => {
-  const history = props.pepper.stageHistory;
-  return history && history.length > 2 ? history.slice(-2) : history || [];
-});
-
-const limitedLocationHistory = computed(
-  (): { date: string; type: string; potVolume?: string }[] => {
-    const history = props.pepper.locationHistory;
-    return history && history.length > 2 ? history.slice(-2) : history || [];
-  },
-);
-
-function handleImageUploadComplete(result: { url: string; path: string }) {
-  editForm.value.photoUrl = result.url;
-}
-
-function handleImageUploadError(errorMessage: string) {
-  $q.notify({
-    color: 'negative',
-    message: `Ошибка загрузки изображения: ${errorMessage}`,
-  });
-}
-
-defineExpose({
-  editMode,
-  editForm,
-  toggleEditMode,
-  saveEdit,
-  cancelEdit,
-  daysSincePlanting,
-});
 </script>
 
 <style scoped>
@@ -812,23 +392,5 @@ defineExpose({
   .my-card .q-img {
     height: 180px !important;
   }
-}
-
-/* Компактный режим для карточек с большим количеством контента */
-.compact-mode .q-card-section {
-  padding: 8px 12px;
-}
-
-.compact-mode .text-h6 {
-  font-size: 1rem;
-  margin-bottom: 4px;
-}
-
-.compact-mode .q-mb-xs {
-  margin-bottom: 4px;
-}
-
-.compact-mode .q-mt-sm {
-  margin-top: 8px;
 }
 </style>
