@@ -1,3 +1,5 @@
+import type { PlantProblem } from 'stores/plant-problems-library';
+
 export interface Todo {
   id: number;
   content: string;
@@ -11,6 +13,8 @@ export interface Observation {
   date: string;
   height?: number;
   leafCondition: string;
+  note?: string;
+  problems?: PlantProblem[];
 }
 
 export interface Pepper {
@@ -79,11 +83,26 @@ export interface Pepper {
 }
 
 export interface FertilizerComposition {
-  N?: number;
-  P?: number;
-  K?: number;
-  CaO?: number;
-  MgO?: number;
+  // Макроэлементы (основные)
+  N?: number; // Азот
+  P?: number; // Фосфор
+  K?: number; // Калий
+  Ca?: number; // Кальций
+  Mg?: number; // Магний
+  S?: number; // Сера
+
+  // Микроэлементы
+  Fe?: number; // Железо
+  Mn?: number; // Марганец
+  Zn?: number; // Цинк
+  Cu?: number; // Медь
+  B?: number; // Бор
+  Mo?: number; // Молибден
+  Cl?: number; // Хлор
+  Co?: number; // Кобальт
+  Ni?: number; // Никель
+  Si?: number; // Кремний
+
   [key: string]: number | undefined;
 }
 

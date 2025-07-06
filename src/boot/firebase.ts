@@ -1,7 +1,7 @@
-// Import the functions you need from the SDKs you need
+// Import only needed functions from Firebase SDK
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 // Конфигурация Firebase для проекта SeverFans
 // Storage будет использоваться из проекта SeverFans
@@ -15,17 +15,44 @@ const firebaseConfig = {
   measurementId: 'G-4ZESK2ST90',
 };
 
-console.log('🚀 Инициализация Firebase...');
-console.log('📋 Конфигурация Firebase:', firebaseConfig);
+// Initialize Firebase only once
+let firebaseApp: any = null;
+let firestoreDb: any = null;
+let firebaseStorage: any = null;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-console.log('✅ Firebase приложение инициализировано');
+function initializeFirebase() {
+  if (!firebaseApp) {
+    console.log('🚀 Инициализация Firebase...');
+    firebaseApp = initializeApp(firebaseConfig);
+    console.log('✅ Firebase приложение инициализировано');
 
-export { app };
+    firestoreDb = getFirestore(firebaseApp);
+    console.log('✅ Firestore инициализирован');
 
-export const db = getFirestore(app);
-console.log('✅ Firestore инициализирован:', db);
+    firebaseStorage = getStorage(firebaseApp);
+    console.log('✅ Storage инициализирован');
+  }
 
-export const storage = getStorage(app);
-console.log('✅ Storage инициализирован:', storage);
+  return { app: firebaseApp, db: firestoreDb, storage: firebaseStorage };
+}
+
+// Lazy initialization
+export const getFirebaseApp = () => {
+  const { app } = initializeFirebase();
+  return app;
+};
+
+export const getFirebaseDb = () => {
+  const { db } = initializeFirebase();
+  return db;
+};
+
+export const getFirebaseStorage = () => {
+  const { storage } = initializeFirebase();
+  return storage;
+};
+
+// For backward compatibility
+export const app = getFirebaseApp();
+export const db = getFirebaseDb();
+export const storage = getFirebaseStorage();

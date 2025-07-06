@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig((ctx) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
-    // preFetch: true,
+    preFetch: true,
 
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
@@ -56,11 +56,35 @@ export default defineConfig((ctx) => {
       // env: {},
       // rawDefine: {}
       // ignorePublicFolder: true,
-      // minify: false,
+      minify: true,
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf(viteConf) {
+        // Добавляем оптимизации для production
+        if (ctx.prod) {
+          viteConf.build = {
+            ...viteConf.build,
+            // Разделение кода на чанки
+            rollupOptions: {
+              output: {
+                manualChunks: {
+                  'firebase-vendor': ['firebase/app', 'firebase/firestore', 'firebase/storage'],
+                  'quasar-vendor': ['quasar'],
+                  'vue-vendor': ['vue', 'vue-router', 'pinia'],
+                },
+              },
+            },
+            // Сжатие для production
+            terserOptions: {
+              compress: {
+                drop_console: true,
+                drop_debugger: true,
+              },
+            },
+          };
+        }
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [
@@ -116,12 +140,12 @@ export default defineConfig((ctx) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: ['Dialog'],
+      plugins: ['Dialog', 'Notify', 'Loading'],
     },
 
     // animations: 'all', // --- includes all animations
     // https://v2.quasar.dev/options/animations
-    animations: [],
+    animations: ['fadeIn', 'fadeOut', 'slideInRight', 'slideOutLeft'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#sourcefiles
     // sourceFiles: {

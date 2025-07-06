@@ -11,6 +11,7 @@ import {
   DocumentData,
 } from 'firebase/firestore';
 import { db } from 'src/boot/firebase';
+import { globalCache } from 'src/composables/useCache';
 
 export interface PepperVarietyV2 {
   id: string;
@@ -44,8 +45,25 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
     lastManualUpdate.value = dateStr || new Date().toISOString();
   }
 
-  // Загрузка первой страницы
+  // Загрузка первой страницы с кэшированием
   const fetchFirstPage = async () => {
+    const cacheKey = `varieties_v2_page_1_${pageSize.value}`;
+
+    // Проверяем кэш
+    const cachedData = globalCache.get<{
+      items: PepperVarietyV2[];
+      hasNextPage: boolean;
+    }>(cacheKey);
+
+    if (cachedData) {
+      console.log('[fetchFirstPage] загружено из кэша');
+      items.value = cachedData.items;
+      hasNextPage.value = cachedData.hasNextPage;
+      currentPage.value = 1;
+      cursorStack.value = [null];
+      return;
+    }
+
     loading.value = true;
     error.value = null;
     try {
@@ -57,16 +75,29 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
         snap.docs.length,
         snap.docs.map((d) => d.id),
       );
-      items.value = snap.docs.map((doc) => {
+
+      const fetchedItems = snap.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as PepperVarietyV2;
         (data as any)._docRef = doc;
         return data;
       });
+
+      items.value = fetchedItems;
       cursorStack.value = [null];
       console.log('[fetchFirstPage] cursorStack:', cursorStack.value);
       hasNextPage.value = snap.docs.length === pageSize.value;
       currentPage.value = 1;
       console.log('[fetchFirstPage] currentPage:', currentPage.value);
+
+      // Кэшируем результат на 10 минут
+      globalCache.set(
+        cacheKey,
+        {
+          items: fetchedItems,
+          hasNextPage: hasNextPage.value,
+        },
+        10 * 60 * 1000,
+      );
     } catch (e: any) {
       error.value = e.message || 'Ошибка загрузки';
       console.error('[fetchFirstPage] error:', error.value);
@@ -81,6 +112,23 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
     const lastCursor =
       items.value.length > 0 ? (items.value as any)[items.value.length - 1]._docRef : null;
     if (!lastCursor) return;
+
+    const cacheKey = `varieties_v2_page_${currentPage.value + 1}_${pageSize.value}`;
+
+    // Проверяем кэш
+    const cachedData = globalCache.get<{
+      items: PepperVarietyV2[];
+      hasNextPage: boolean;
+    }>(cacheKey);
+
+    if (cachedData) {
+      console.log('[fetchNextPage] загружено из кэша');
+      items.value = cachedData.items;
+      hasNextPage.value = cachedData.hasNextPage;
+      currentPage.value++;
+      return;
+    }
+
     loading.value = true;
     error.value = null;
     try {
@@ -96,11 +144,14 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
         snap.docs.length,
         snap.docs.map((d) => d.id),
       );
-      items.value = snap.docs.map((doc) => {
+
+      const fetchedItems = snap.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as PepperVarietyV2;
         (data as any)._docRef = doc;
         return data;
       });
+
+      items.value = fetchedItems;
       const lastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
       if (lastDoc) {
         cursorStack.value.push(lastDoc);
@@ -109,6 +160,16 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
       hasNextPage.value = snap.docs.length === pageSize.value;
       console.log('[fetchNextPage] currentPage:', currentPage.value);
       console.log('[fetchNextPage] cursorStack:', cursorStack.value);
+
+      // Кэшируем результат на 10 минут
+      globalCache.set(
+        cacheKey,
+        {
+          items: fetchedItems,
+          hasNextPage: hasNextPage.value,
+        },
+        10 * 60 * 1000,
+      );
     } catch (e: any) {
       error.value = e.message || 'Ошибка загрузки';
       console.error('[fetchNextPage] error:', error.value);
@@ -121,6 +182,23 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
   const fetchPrevPage = async () => {
     if (loading.value) return;
     if (currentPage.value <= 1 || cursorStack.value.length <= 1) return;
+
+    const cacheKey = `varieties_v2_page_${currentPage.value - 1}_${pageSize.value}`;
+
+    // Проверяем кэш
+    const cachedData = globalCache.get<{
+      items: PepperVarietyV2[];
+      hasNextPage: boolean;
+    }>(cacheKey);
+
+    if (cachedData) {
+      console.log('[fetchPrevPage] загружено из кэша');
+      items.value = cachedData.items;
+      hasNextPage.value = cachedData.hasNextPage;
+      currentPage.value--;
+      return;
+    }
+
     loading.value = true;
     error.value = null;
     try {
@@ -141,11 +219,14 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
         snap.docs.length,
         snap.docs.map((d) => d.id),
       );
-      items.value = snap.docs.map((doc) => {
+
+      const fetchedItems = snap.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as PepperVarietyV2;
         (data as any)._docRef = doc;
         return data;
       });
+
+      items.value = fetchedItems;
       if (cursorStack.value.length > 1) {
         cursorStack.value.pop();
         currentPage.value--;
@@ -153,6 +234,16 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
       hasNextPage.value = snap.docs.length === pageSize.value;
       console.log('[fetchPrevPage] currentPage:', currentPage.value);
       console.log('[fetchPrevPage] cursorStack:', cursorStack.value);
+
+      // Кэшируем результат на 10 минут
+      globalCache.set(
+        cacheKey,
+        {
+          items: fetchedItems,
+          hasNextPage: hasNextPage.value,
+        },
+        10 * 60 * 1000,
+      );
     } catch (e: any) {
       error.value = e.message || 'Ошибка загрузки';
       console.error('[fetchPrevPage] error:', error.value);
@@ -161,17 +252,32 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
     }
   };
 
-  // Загрузка всех сортов (для поиска/фильтрации)
+  // Загрузка всех сортов (для поиска/фильтрации) с кэшированием
   const fetchAllItems = async () => {
+    const cacheKey = 'varieties_v2_all_items';
+
+    // Проверяем кэш (кэшируем на 30 минут)
+    const cachedData = globalCache.get<PepperVarietyV2[]>(cacheKey);
+    if (cachedData) {
+      console.log('[fetchAllItems] загружено из кэша');
+      allItems.value = cachedData;
+      return;
+    }
+
     loading.value = true;
     error.value = null;
     try {
       const snap = await getDocs(query(collection(db, 'varieties_v2'), orderBy('name')));
-      allItems.value = snap.docs.map((doc) => {
+      const fetchedItems = snap.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as PepperVarietyV2;
         (data as any)._docRef = doc;
         return data;
       });
+
+      allItems.value = fetchedItems;
+
+      // Кэшируем на 30 минут
+      globalCache.set(cacheKey, fetchedItems, 30 * 60 * 1000);
     } catch (e: any) {
       error.value = e.message || 'Ошибка загрузки';
       console.error('[fetchAllItems] error:', error.value);

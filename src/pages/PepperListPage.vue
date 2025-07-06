@@ -70,8 +70,11 @@
 
       <!-- Список перцев -->
       <div v-else>
+        <!-- Фильтры и поиск -->
+        <PepperFilters v-model="filters" v-model:view-mode="viewMode" />
+
         <div class="row items-center justify-between q-mb-md">
-          <h5 class="q-my-none">Ваши перцы ({{ peppers.length }})</h5>
+          <h5 class="q-my-none">Ваши перцы ({{ filteredPeppers.length }})</h5>
           <q-btn
             color="primary"
             icon="add"
@@ -92,6 +95,8 @@
                 @update:stage="updateStage(pepper.id, $event)"
                 @delete="handleDelete"
                 @toggle-favorite="handleToggleFavorite"
+                @edit="handleEdit"
+                @update="(updates) => handleUpdate(pepper.id, updates)"
               />
             </div>
           </div>
@@ -121,6 +126,7 @@ import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import PepperCard from 'components/PepperCard.vue';
 import MigrationPanel from 'components/MigrationPanel.vue';
+import PepperFilters from 'components/PepperFilters.vue';
 import type { Pepper } from 'components/models';
 import { ref, computed, onMounted, watch } from 'vue';
 
@@ -131,6 +137,19 @@ const $q = useQuasar();
 const $router = useRouter();
 
 const page = ref(1);
+const viewMode = ref<'grid' | 'list'>('grid');
+const filters = ref({
+  search: '',
+  stage: null as string | null,
+  location: null as string | null,
+  favorite: null as boolean | null,
+  sortBy: 'name' as string,
+  dateFrom: '',
+  dateTo: '',
+  minAge: null as number | null,
+  maxAge: null as number | null,
+});
+
 const perPage = computed(() => {
   // Меньше перцев на мобильных устройствах
   if (window.innerWidth < 600) return 4;
@@ -138,10 +157,88 @@ const perPage = computed(() => {
   return 8;
 });
 
-const pageCount = computed(() => Math.ceil(peppers.value.length / perPage.value));
+// Фильтрация и сортировка перцев
+const filteredPeppers = computed(() => {
+  let result = [...peppers.value];
+
+  // Поиск по названию и описанию
+  if (filters.value.search) {
+    const searchTerm = filters.value.search.toLowerCase();
+    result = result.filter(
+      (pepper) =>
+        pepper.name.toLowerCase().includes(searchTerm) ||
+        pepper.description.toLowerCase().includes(searchTerm) ||
+        pepper.variety.toLowerCase().includes(searchTerm),
+    );
+  }
+
+  // Фильтр по стадии
+  if (filters.value.stage) {
+    result = result.filter((pepper) => pepper.stage === filters.value.stage);
+  }
+
+  // Фильтр по месту посадки
+  if (filters.value.location) {
+    result = result.filter((pepper) => pepper.location?.type === filters.value.location);
+  }
+
+  // Фильтр по избранному
+  if (filters.value.favorite !== null) {
+    result = result.filter((pepper) => pepper.isFavorite === filters.value.favorite);
+  }
+
+  // Фильтр по дате посадки
+  if (filters.value.dateFrom) {
+    result = result.filter((pepper) => pepper.plantingDate >= filters.value.dateFrom);
+  }
+  if (filters.value.dateTo) {
+    result = result.filter((pepper) => pepper.plantingDate <= filters.value.dateTo);
+  }
+
+  // Фильтр по возрасту
+  if (filters.value.minAge || filters.value.maxAge) {
+    result = result.filter((pepper) => {
+      const plantDate = new Date(pepper.plantingDate);
+      const now = new Date();
+      const age = Math.floor((now.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (filters.value.minAge && age < filters.value.minAge) return false;
+      if (filters.value.maxAge && age > filters.value.maxAge) return false;
+      return true;
+    });
+  }
+
+  // Сортировка
+  result.sort((a, b) => {
+    switch (filters.value.sortBy) {
+      case 'name':
+        return a.name.localeCompare(b.name);
+      case 'plantingDate':
+        return new Date(a.plantingDate).getTime() - new Date(b.plantingDate).getTime();
+      case 'stage':
+        return a.stage.localeCompare(b.stage);
+      case 'age':
+        const ageA = Math.floor(
+          (new Date().getTime() - new Date(a.plantingDate).getTime()) / (1000 * 60 * 60 * 24),
+        );
+        const ageB = Math.floor(
+          (new Date().getTime() - new Date(b.plantingDate).getTime()) / (1000 * 60 * 60 * 24),
+        );
+        return ageA - ageB;
+      case 'favorite':
+        return (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+      default:
+        return 0;
+    }
+  });
+
+  return result;
+});
+
+const pageCount = computed(() => Math.ceil(filteredPeppers.value.length / perPage.value));
 const pagedPeppers = computed(() => {
   const start = (page.value - 1) * perPage.value;
-  return peppers.value.slice(start, start + perPage.value);
+  return filteredPeppers.value.slice(start, start + perPage.value);
 });
 
 // Загружаем перцы при изменении авторизации
@@ -199,6 +296,7 @@ async function createTestPepper() {
         hasSoilImprovement: false,
         soilImprovement: null,
       },
+      userId: userStore.user?.uid || '',
     };
 
     await pepperFirestore.addPepper(testPepper);
@@ -283,6 +381,36 @@ async function handleToggleFavorite(id: string) {
     $q.notify({
       color: 'negative',
       message: 'Ошибка обновления избранного',
+      icon: 'error',
+    });
+  }
+}
+
+function handleEdit(pepper: Pepper) {
+  // Пока просто переходим на страницу редактирования
+  // В будущем можно создать отдельную страницу редактирования
+  $q.notify({
+    color: 'info',
+    message: `Редактирование "${pepper.name}" - функция в разработке`,
+    icon: 'info',
+  });
+}
+
+async function handleUpdate(pepperId: string, updates: Partial<Pepper>) {
+  try {
+    // Обновляем перец в Firestore напрямую
+    await pepperFirestore.updatePepper(pepperId, updates);
+
+    $q.notify({
+      color: 'positive',
+      message: 'Изменения сохранены',
+      icon: 'check_circle',
+    });
+  } catch (error) {
+    console.error('Error updating pepper:', error);
+    $q.notify({
+      color: 'negative',
+      message: 'Ошибка сохранения изменений',
       icon: 'error',
     });
   }
