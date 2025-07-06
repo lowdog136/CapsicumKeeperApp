@@ -12,13 +12,17 @@
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev",
     "build": "quasar build",
+    "build:analyze": "quasar build --analyze",
     "build:firebase": "quasar build && firebase deploy",
     "deploy": "firebase deploy",
     "postinstall": "quasar prepare",
     "release:patch": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
     "release:major": "node scripts/release.js major",
-    "release:check": "node scripts/release.js"
+    "release:check": "node scripts/release.js",
+    "perf:check": "node scripts/performance-check.cjs",
+    "firebase:fix-cors": "node scripts/fix-firebase-cors.cjs",
+    "firebase:debug": "node scripts/debug-firebase.cjs"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",

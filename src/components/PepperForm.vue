@@ -9,7 +9,7 @@
         required
         class="q-mb-sm"
       />
-      <VarietySelector v-model="selectedVariety" :errors="errors" class="q-mb-sm" />
+      <VarietySelector v-model="selectedVariety" :errors="errors" class="q-mb-sm" :useV2="true" />
       <q-input
         v-model="form.description"
         label="Описание*"
@@ -415,7 +415,7 @@ type SoilExtras = NonNullable<Pepper['soilExtras']>;
 
 const selectedVariety = ref<PepperVariety | null>(null);
 
-const form = ref<Omit<Pepper, 'id'> & { soilExtras: SoilExtras }>({
+const form = ref<Omit<Pepper, 'id' | 'userId'> & { soilExtras: SoilExtras }>({
   name: '',
   variety: '',
   photoUrl: '',
@@ -643,14 +643,17 @@ function onSubmit() {
     varietyInfo: selectedVariety.value
       ? {
           id: selectedVariety.value.id,
-          species: selectedVariety.value.species,
-          heatLevel: selectedVariety.value.heatLevel,
-          origin: selectedVariety.value.origin,
-          color: selectedVariety.value.color,
-          plantHeight: selectedVariety.value.plantHeight,
-          daysToMaturity: selectedVariety.value.daysToMaturity,
-          fruitSize: selectedVariety.value.fruitSize,
-          growingTips: selectedVariety.value.growingTips,
+          species: selectedVariety.value.species || 'Capsicum annuum',
+          heatLevel: selectedVariety.value.heatLevel || 'mild',
+          origin: selectedVariety.value.origin || '',
+          color: selectedVariety.value.color || [],
+          plantHeight: selectedVariety.value.plantHeight || { min: 30, max: 60, unit: 'cm' },
+          daysToMaturity: selectedVariety.value.daysToMaturity || { min: 70, max: 90 },
+          fruitSize: selectedVariety.value.fruitSize || {
+            length: { min: 5, max: 10, unit: 'cm' },
+            width: { min: 2, max: 4, unit: 'cm' },
+          },
+          growingTips: selectedVariety.value.growingTips || [],
         }
       : undefined,
   };

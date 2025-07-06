@@ -6,8 +6,8 @@
         <q-input
           v-model="selectedVarietyName"
           label="Сорт перца*"
-          :error="!!errors.variety"
-          :error-message="errors.variety"
+          :error="!!errors?.variety"
+          :error-message="errors?.variety"
           required
           readonly
           class="q-mb-sm"
@@ -40,10 +40,18 @@
         <q-card-section class="q-pa-sm">
           <div class="row items-center q-gutter-sm">
             <q-chip
-              :color="getHeatLevelInfo(selectedVariety.heatLevel).color"
+              :color="
+                useV2
+                  ? getHeatLevelInfoV2(selectedVariety.shu ?? selectedVariety.heatLevel).color
+                  : getHeatLevelInfoV1(selectedVariety.heatLevel).color
+              "
               text-color="white"
               size="sm"
-              :label="getHeatLevelInfo(selectedVariety.heatLevel).name"
+              :label="
+                useV2
+                  ? getHeatLevelInfoV2(selectedVariety.shu ?? selectedVariety.heatLevel).name
+                  : getHeatLevelInfoV1(selectedVariety.heatLevel).name
+              "
             />
             <q-chip
               color="primary"
@@ -95,7 +103,7 @@
             <div class="col-12 col-md-3">
               <q-select
                 v-model="filters.heatLevel"
-                :options="store.heatLevels"
+                :options="useV2 ? [] : storeV1.heatLevels"
                 option-label="name"
                 option-value="level"
                 outlined
@@ -104,6 +112,7 @@
                 placeholder="Острота"
                 emit-value
                 map-options
+                :disable="useV2"
               >
                 <template v-slot:prepend>
                   <q-icon name="whatshot" />
@@ -113,7 +122,15 @@
             <div class="col-12 col-md-3">
               <q-select
                 v-model="filters.species"
-                :options="store.species"
+                :options="
+                  useV2
+                    ? storeV2.allItems.length > 0
+                      ? Array.from(new Set(storeV2.allItems.map((v) => v.species)).values())
+                          .filter(Boolean)
+                          .map((s) => ({ label: s, value: s }))
+                      : []
+                    : storeV1.species
+                "
                 option-label="label"
                 option-value="value"
                 outlined
@@ -131,12 +148,15 @@
           </div>
 
           <!-- Список сортов -->
-          <div v-if="store.loading" class="text-center q-pa-xl">
+          <div v-if="useV2 ? storeV2.loading : storeV1.loading" class="text-center q-pa-xl">
             <q-spinner-dots size="50px" color="primary" />
             <div class="q-mt-md">Загрузка сортов...</div>
           </div>
 
-          <div v-else-if="filteredVarieties.length === 0" class="text-center q-pa-xl">
+          <div
+            v-else-if="useV2 ? filteredVarietiesV2.length === 0 : filteredVarietiesV1.length === 0"
+            class="text-center q-pa-xl"
+          >
             <q-icon name="search_off" size="100px" color="grey-4" />
             <div class="text-h6 q-mt-md text-grey-6">Сорта не найдены</div>
             <div class="text-body2 text-grey-5">Попробуйте изменить параметры поиска</div>
@@ -144,7 +164,9 @@
 
           <div v-else class="row q-col-gutter-md">
             <div
-              v-for="variety in filteredVarieties"
+              v-for="variety in useV2
+                ? filteredVarietiesV2.slice(0, 12)
+                : filteredVarietiesV1.slice(0, 12)"
               :key="variety.id"
               class="col-12 col-md-6 col-lg-4"
             >
@@ -152,15 +174,24 @@
                 class="variety-selector-card cursor-pointer"
                 :class="{ 'selected-variety': selectedVariety?.id === variety.id }"
                 @click="selectVariety(variety)"
+                @dblclick="handleDoubleClick(variety)"
               >
                 <q-card-section>
                   <div class="row items-center justify-between q-mb-sm">
                     <h6 class="q-my-none text-weight-bold">{{ variety.name }}</h6>
                     <q-chip
-                      :color="getHeatLevelInfo(variety.heatLevel).color"
+                      :color="
+                        useV2
+                          ? getHeatLevelInfoV2(variety.shu ?? variety.heatLevel).color
+                          : getHeatLevelInfoV1(variety.heatLevel).color
+                      "
                       text-color="white"
                       size="sm"
-                      :label="getHeatLevelInfo(variety.heatLevel).name"
+                      :label="
+                        useV2
+                          ? getHeatLevelInfoV2(variety.shu ?? variety.heatLevel).name
+                          : getHeatLevelInfoV1(variety.heatLevel).name
+                      "
                     />
                   </div>
 
@@ -180,14 +211,55 @@
                     <div class="col-6">
                       <div class="text-caption text-grey-6">Высота</div>
                       <div class="text-body2">
-                        {{ variety.plantHeight.min }}-{{ variety.plantHeight.max }}
-                        {{ variety.plantHeight.unit }}
+                        <template v-if="useV2">
+                          <template
+                            v-if="typeof variety.plantHeight === 'object' && variety.plantHeight"
+                          >
+                            {{ variety.plantHeight.min ?? ''
+                            }}<template v-if="variety.plantHeight.max"
+                              >-{{ variety.plantHeight.max }}</template
+                            >
+                            <template v-if="variety.plantHeight.unit">
+                              {{ variety.plantHeight.unit }}</template
+                            >
+                          </template>
+                          <template v-else>{{ variety.plantHeight }}</template>
+                        </template>
+                        <template v-else>
+                          {{ variety.plantHeight.min
+                          }}<template v-if="variety.plantHeight.max"
+                            >-{{ variety.plantHeight.max }}</template
+                          >
+                          <template v-if="variety.plantHeight.unit">
+                            {{ variety.plantHeight.unit }}</template
+                          >
+                        </template>
                       </div>
                     </div>
                     <div class="col-6">
                       <div class="text-caption text-grey-6">Созревание</div>
                       <div class="text-body2">
-                        {{ variety.daysToMaturity.min }}-{{ variety.daysToMaturity.max }} дней
+                        <template v-if="useV2">
+                          <template
+                            v-if="
+                              typeof variety.daysToMaturity === 'object' && variety.daysToMaturity
+                            "
+                          >
+                            {{ variety.daysToMaturity.min ?? ''
+                            }}<template v-if="variety.daysToMaturity.max"
+                              >-{{ variety.daysToMaturity.max }}</template
+                            >
+                            дней
+                          </template>
+                          <template v-else>{{ variety.daysToMaturity }}</template>
+                        </template>
+                        <template v-else>
+                          {{ variety.daysToMaturity.min
+                          }}<template v-if="variety.daysToMaturity.max"
+                            >-{{ variety.daysToMaturity.max }}</template
+                          >
+                          дней
+                        </template>
                       </div>
                     </div>
                   </div>
@@ -228,30 +300,53 @@
 
               <h6>Научная классификация</h6>
               <p><strong>Вид:</strong> {{ selectedVariety.species }}</p>
-              <p v-if="getSpeciesInfo(selectedVariety.species)?.description">
-                {{ getSpeciesInfo(selectedVariety.species)?.description }}
+              <p
+                v-if="
+                  useV2
+                    ? getSpeciesInfoV2(selectedVariety.species)?.label
+                    : getSpeciesInfoV1(selectedVariety.species)?.description
+                "
+              >
+                {{
+                  useV2
+                    ? getSpeciesInfoV2(selectedVariety.species)?.label
+                    : getSpeciesInfoV1(selectedVariety.species)?.description
+                }}
               </p>
 
               <h6>Характеристики</h6>
               <ul>
                 <li>
                   <strong>Острота:</strong>
-                  {{ getHeatLevelInfo(selectedVariety.heatLevel).name }} ({{
-                    getHeatLevelInfo(selectedVariety.heatLevel).shuRange
-                  }})
-                </li>
-                <li><strong>Цвета:</strong> {{ selectedVariety.color.join(', ') }}</li>
-                <li>
-                  <strong>Высота:</strong> {{ selectedVariety.plantHeight.min }}-{{
-                    selectedVariety.plantHeight.max
+                  {{
+                    useV2
+                      ? getHeatLevelInfoV2(selectedVariety.shu ?? selectedVariety.heatLevel).name
+                      : getHeatLevelInfoV1(selectedVariety.heatLevel).name
                   }}
-                  {{ selectedVariety.plantHeight.unit }}
+                </li>
+                <li v-if="selectedVariety.color">
+                  <strong>Цвета:</strong>
+                  {{
+                    Array.isArray(selectedVariety.color)
+                      ? selectedVariety.color.join(', ')
+                      : selectedVariety.color
+                  }}
                 </li>
                 <li>
-                  <strong>Созревание:</strong> {{ selectedVariety.daysToMaturity.min }}-{{
-                    selectedVariety.daysToMaturity.max
+                  <strong>Высота:</strong>
+                  {{
+                    useV2
+                      ? getHeatLevelInfoV2(selectedVariety.shu ?? selectedVariety.heatLevel).name
+                      : getHeatLevelInfoV1(selectedVariety.heatLevel).name
                   }}
-                  дней
+                </li>
+                <li>
+                  <strong>Созревание:</strong>
+                  {{
+                    useV2
+                      ? getHeatLevelInfoV2(selectedVariety.shu ?? selectedVariety.heatLevel).name
+                      : getHeatLevelInfoV1(selectedVariety.heatLevel).name
+                  }}
                 </li>
                 <li v-if="selectedVariety.origin">
                   <strong>Происхождение:</strong> {{ selectedVariety.origin }}
@@ -267,14 +362,26 @@
 
               <h6>Размер плода</h6>
               <p>
-                Длина: {{ selectedVariety.fruitSize.length.min }}-{{
-                  selectedVariety.fruitSize.length.max
-                }}
-                {{ selectedVariety.fruitSize.length.unit }}<br />
-                Ширина: {{ selectedVariety.fruitSize.width.min }}-{{
-                  selectedVariety.fruitSize.width.max
-                }}
-                {{ selectedVariety.fruitSize.width.unit }}
+                <template v-if="selectedVariety.fruitSize">
+                  Длина:
+                  {{
+                    selectedVariety.fruitSize.length?.min ??
+                    selectedVariety.fruitSize.length?.toString?.() ??
+                    ''
+                  }}<template v-if="selectedVariety.fruitSize.length?.max"
+                    >-{{ selectedVariety.fruitSize.length.max }}</template
+                  >
+                  {{ selectedVariety.fruitSize.length?.unit }}<br />
+                  Ширина:
+                  {{
+                    selectedVariety.fruitSize.width?.min ??
+                    selectedVariety.fruitSize.width?.toString?.() ??
+                    ''
+                  }}<template v-if="selectedVariety.fruitSize.width?.max"
+                    >-{{ selectedVariety.fruitSize.width.max }}</template
+                  >
+                  {{ selectedVariety.fruitSize.width?.unit }}
+                </template>
               </p>
             </div>
           </div>
@@ -289,20 +396,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useVarietyLibraryStore } from 'src/stores/variety-library';
+import { useVarietyLibraryV2Store } from 'src/stores/variety-library-v2';
 import type { PepperVariety } from 'src/components/models';
 
 const props = defineProps<{
-  modelValue?: PepperVariety | null;
+  modelValue?: any | null;
   errors?: { variety?: string };
+  useV2?: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: PepperVariety | null): void;
+  (e: 'update:modelValue', value: any | null): void;
 }>();
 
-const store = useVarietyLibraryStore();
+const useV2 = computed(() => props.useV2 === true);
+
+// Stores
+const storeV1 = useVarietyLibraryStore();
+const storeV2 = useVarietyLibraryV2Store();
+
 const showVarietyDialog = ref(false);
 const showVarietyInfo = ref(false);
 const searchTerm = ref('');
@@ -319,15 +433,37 @@ const selectedVariety = computed({
 
 const selectedVarietyName = computed(() => selectedVariety.value?.name || '');
 
-const filteredVarieties = computed(() => {
-  return store.searchVarieties(searchTerm.value, filters.value);
+// --- V1 ---
+const filteredVarietiesV1 = computed(() => {
+  return storeV1.searchVarieties(searchTerm.value, filters.value);
 });
+const getHeatLevelInfoV1 = storeV1.getHeatLevelInfo;
+const getSpeciesInfoV1 = storeV1.getSpeciesInfo;
 
-const getHeatLevelInfo = store.getHeatLevelInfo;
-const getSpeciesInfo = store.getSpeciesInfo;
+// --- V2 ---
+const filteredVarietiesV2 = computed(() => {
+  let arr = storeV2.allItems.length > 0 ? storeV2.allItems : storeV2.items;
+  if (searchTerm.value) {
+    const q = searchTerm.value.trim().toLowerCase();
+    arr = arr.filter((v) => v.name?.toLowerCase().includes(q));
+  }
+  if (filters.value.species) {
+    arr = arr.filter((v) => v.species === filters.value.species);
+  }
+  // TODO: фильтр по heatLevel если появится в v2
+  return arr;
+});
+const getHeatLevelInfoV2 = (level: any) => {
+  // В v2 heatLevel может быть просто числом SHU или строкой, адаптировать под нужды UI
+  if (!level) return { name: 'Нет данных', color: 'grey' };
+  if (typeof level === 'string') return { name: level, color: 'primary' };
+  if (typeof level === 'number') return { name: `${level} SHU`, color: 'red' };
+  return { name: String(level), color: 'primary' };
+};
+const getSpeciesInfoV2 = (species: string) => ({ label: species, value: species });
 
 // Методы
-function selectVariety(variety: PepperVariety) {
+function selectVariety(variety: any) {
   selectedVariety.value = variety;
 }
 
@@ -337,10 +473,35 @@ function confirmSelection() {
   }
 }
 
+function handleDoubleClick(variety: any) {
+  selectVariety(variety);
+  confirmSelection();
+}
+
 // Инициализация
 onMounted(async () => {
-  if (store.varieties.length === 0) {
-    await store.loadVarieties();
+  if (useV2.value) {
+    if (storeV2.items.length === 0) {
+      await storeV2.fetchFirstPage();
+    }
+    if (storeV2.allItems.length === 0) {
+      await storeV2.fetchAllItems();
+    }
+  } else {
+    if (storeV1.varieties.length === 0) {
+      await storeV1.loadVarieties();
+    }
+  }
+});
+
+watch(useV2, async (val) => {
+  if (val) {
+    if (storeV2.items.length === 0) {
+      await storeV2.fetchFirstPage();
+    }
+    if (storeV2.allItems.length === 0) {
+      await storeV2.fetchAllItems();
+    }
   }
 });
 </script>
