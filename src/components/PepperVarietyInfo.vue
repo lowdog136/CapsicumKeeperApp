@@ -10,7 +10,7 @@
             :label="getHeatLevelInfo(pepper.varietyInfo.heatLevel).name"
           />
           <q-chip
-            color="primary"
+            class="species-chip"
             text-color="white"
             size="sm"
             :label="pepper.varietyInfo.species"
@@ -72,3 +72,11 @@ function getHeatLevelInfo(heatLevel: HeatLevel) {
   return heatLevels[heatLevel] || heatLevels['mild'];
 }
 </script>
+
+<style scoped>
+/* Кастомный цвет для chip с species (Capsicum chinense) */
+.species-chip {
+  background-color: #61892f !important;
+  color: #ffffff !important;
+}
+</style>

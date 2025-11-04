@@ -11,7 +11,7 @@
       <div class="row items-center justify-between q-mb-sm">
         <div class="text-h6">{{ pepper.name }}</div>
         <div class="row items-center q-gutter-xs">
-          <q-badge color="positive" size="sm">{{ pepper.id }}</q-badge>
+          <q-badge class="pepper-id-badge" size="sm">{{ pepper.id }}</q-badge>
           <q-btn flat round icon="edit" size="sm" @click="editPepper" />
           <q-btn
             flat
@@ -302,5 +302,11 @@ function handleUpdate(updates: Partial<Pepper>) {
   .my-card .q-img {
     height: 180px !important;
   }
+}
+
+/* Кастомный цвет для badge с ID перца */
+.pepper-id-badge {
+  background-color: #61892f !important;
+  color: #ffffff !important;
 }
 </style>

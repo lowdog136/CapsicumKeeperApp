@@ -1,1 +1,129 @@
 // app global css in SCSS form
+
+// Темная тема с зелеными акцентами
+body {
+  background-color: $dark-page !important;
+  color: #ffffff;
+}
+
+body.body--dark {
+  background-color: $dark-page !important;
+  color: #ffffff;
+}
+
+.q-page {
+  background-color: $dark-page !important;
+}
+
+.q-card {
+  background-color: $grey-8 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0, 255, 136, 0.1);
+  
+  &:hover {
+    border-color: rgba(0, 255, 136, 0.3);
+  }
+}
+
+.q-drawer {
+  background-color: $dark !important;
+}
+
+.q-header {
+  background-color: $dark !important;
+}
+
+// Цвета текста
+.text-primary {
+  color: $primary !important;
+}
+
+.bg-primary {
+  background-color: $primary !important;
+}
+
+.text-secondary {
+  color: $secondary !important;
+}
+
+.bg-secondary {
+  background-color: $secondary !important;
+}
+
+// Улучшенная читаемость серого текста
+.text-grey-6,
+.text-grey-7 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.text-grey-5 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+// Кнопки
+.q-btn {
+  &.bg-primary,
+  &.bg-secondary {
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+}
+
+// Заголовки
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff !important;
+}
+
+// Иконки
+.q-icon {
+  &.text-primary {
+    color: $primary !important;
+  }
+}
+
+// Поля ввода
+.q-field {
+  &.q-field--outlined {
+    .q-field__control {
+      border-color: rgba(255, 255, 255, 0.2);
+      
+      &:hover {
+        border-color: rgba(0, 255, 136, 0.5);
+      }
+    }
+  }
+  
+  &.q-field--filled {
+    .q-field__control {
+      background-color: $grey-8;
+    }
+  }
+}
+
+// Списки
+.q-list {
+  background-color: $grey-8 !important;
+}
+
+.q-item {
+  &:hover {
+    background-color: $grey-7 !important;
+  }
+  
+  &.q-item--active {
+    background-color: rgba(0, 255, 136, 0.1) !important;
+    color: $primary !important;
+  }
+}
+
+// Компоненты
+.variety-info-card {
+  background-color: $grey-8 !important;
+  color: #ffffff !important;
+}
+
+.planting-info-section {
+  background-color: $grey-8 !important;
+  color: #ffffff !important;
+}

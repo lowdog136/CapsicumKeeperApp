@@ -94,7 +94,7 @@
               <q-btn
                 color="primary"
                 label="Перейти к списку"
-                class="q-mt-md"
+                class="q-mt-md darker-primary-btn"
                 @click="$router.push('/peppers')"
               />
             </q-card-section>
@@ -110,9 +110,9 @@
                 Добавьте новый перец в свою коллекцию
               </div>
               <q-btn
-                color="green"
+                color="primary"
                 label="Добавить"
-                class="q-mt-md"
+                class="q-mt-md darker-primary-btn"
                 @click="$router.push('/add-pepper')"
               />
             </q-card-section>
@@ -133,7 +133,7 @@
               <q-btn
                 color="primary"
                 label="Перейти в библиотеку"
-                class="q-mt-md"
+                class="q-mt-md darker-primary-btn"
                 @click="$router.push('/variety-library')"
               />
             </q-card-section>
@@ -288,6 +288,21 @@ function login() {
 @media (min-width: 600px) and (max-width: 1023px) {
   .pepper-card-wrapper :deep(.q-img) {
     height: 180px !important;
+  }
+}
+
+/* Более темные кнопки на главной странице */
+.darker-primary-btn {
+  background-color: #61892f !important;
+  color: #ffffff !important;
+  
+  &:hover {
+    background-color: #557a28 !important;
+    opacity: 1;
+  }
+  
+  &:active {
+    background-color: #4a6b22 !important;
   }
 }
 </style>
