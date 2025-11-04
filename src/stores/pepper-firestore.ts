@@ -21,6 +21,11 @@ export const usePepperFirestore = defineStore('pepperFirestore', {
   }),
   actions: {
     async fetchPeppers() {
+      // Предотвращаем множественные одновременные вызовы
+      if (this.loading) {
+        return;
+      }
+
       this.loading = true;
       this.error = null;
 
@@ -39,6 +44,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', {
         const q = query(peppersRef, where('userId', '==', userStore.user.uid));
         const querySnapshot = await getDocs(q);
 
+        // Заменяем массив новыми данными
         this.peppers = querySnapshot.docs.map(
           (doc) =>
             ({
@@ -277,11 +283,9 @@ export const usePepperFirestore = defineStore('pepperFirestore', {
 
         await updateDoc(doc(db, 'peppers', id), updateData);
 
-        // Обновляем локальное состояние без перезагрузки всех данных
-        const index = this.peppers.findIndex((p) => p.id === id);
-        if (index !== -1) {
-          this.peppers[index] = { ...this.peppers[index], ...cleanPepper } as Pepper;
-        }
+        // Перезагружаем данные из Firestore для синхронизации
+        // Это предотвращает циклические обновления реактивности
+        await this.fetchPeppers();
       } catch (error) {
         console.error('Error updating pepper:', error);
         throw error;

@@ -150,10 +150,14 @@ const filters = ref({
   maxAge: null as number | null,
 });
 
+// Простое вычисление perPage без реактивности на window.innerWidth
+// Это предотвращает ненужные пересчеты computed свойств
 const perPage = computed(() => {
   // Меньше перцев на мобильных устройствах
-  if (window.innerWidth < 600) return 4;
-  if (window.innerWidth < 1024) return 6;
+  // Используем прямую проверку, так как размер окна не меняется часто
+  const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  if (width < 600) return 4;
+  if (width < 1024) return 6;
   return 8;
 });
 
@@ -208,8 +212,9 @@ const filteredPeppers = computed(() => {
     });
   }
 
-  // Сортировка
-  result.sort((a, b) => {
+  // Сортировка - создаем отсортированную копию, не мутируем исходный массив
+  // Это предотвращает циклические обновления реактивности
+  const sorted = [...result].sort((a, b) => {
     switch (filters.value.sortBy) {
       case 'name':
         return a.name.localeCompare(b.name);
@@ -232,7 +237,7 @@ const filteredPeppers = computed(() => {
     }
   });
 
-  return result;
+  return sorted;
 });
 
 const pageCount = computed(() => Math.ceil(filteredPeppers.value.length / perPage.value));

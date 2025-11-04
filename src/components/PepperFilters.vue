@@ -180,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import type { Pepper } from './models';
 
 const props = defineProps<{
@@ -272,21 +272,40 @@ function toggleViewMode() {
   emit('update:viewMode', newMode);
 }
 
+// Флаг для предотвращения циклических обновлений
+const isUpdating = ref(false);
+
 // Следим за изменениями фильтров
 watch(
   filters,
   (newFilters) => {
-    emit('update:modelValue', newFilters);
+    if (!isUpdating.value) {
+      isUpdating.value = true;
+      emit('update:modelValue', newFilters);
+      // Сбрасываем флаг после следующего тика
+      nextTick(() => {
+        isUpdating.value = false;
+      });
+    }
   },
   { deep: true },
 );
 
-// Инициализация
+// Инициализация - синхронизируем с props только если значения отличаются
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (newValue) {
-      filters.value = { ...newValue };
+    if (!isUpdating.value && newValue) {
+      // Проверяем, отличаются ли значения перед обновлением
+      const currentStr = JSON.stringify(filters.value);
+      const newStr = JSON.stringify(newValue);
+      if (currentStr !== newStr) {
+        isUpdating.value = true;
+        filters.value = { ...newValue };
+        nextTick(() => {
+          isUpdating.value = false;
+        });
+      }
     }
   },
   { immediate: true },
