@@ -92,25 +92,66 @@
       <!-- Статистика -->
       <div class="row q-col-gutter-sm q-mb-md">
         <div class="col-4 text-center">
-          <div class="text-caption text-grey-6 q-mb-xs">Поливов</div>
-          <div class="text-h6 text-weight-bold">{{ pepper.wateringHistory?.length || 0 }}</div>
+          <div 
+            class="stat-item cursor-pointer"
+            @click="openHistoryTab('watering')"
+          >
+            <div class="text-caption text-grey-6 q-mb-xs">Поливов</div>
+            <div class="text-h6 text-weight-bold">{{ pepper.wateringHistory?.length || 0 }}</div>
+          </div>
         </div>
         <div class="col-4 text-center">
-          <div class="text-caption text-grey-6 q-mb-xs">Удобрений</div>
-          <div class="text-h6 text-weight-bold">{{ pepper.fertilizingHistory?.length || 0 }}</div>
+          <div 
+            class="stat-item cursor-pointer"
+            @click="openHistoryTab('fertilizing')"
+          >
+            <div class="text-caption text-grey-6 q-mb-xs">Удобрений</div>
+            <div class="text-h6 text-weight-bold">{{ pepper.fertilizingHistory?.length || 0 }}</div>
+          </div>
         </div>
         <div class="col-4 text-center">
-          <div class="text-caption text-grey-6 q-mb-xs">Наблюдений</div>
-          <div class="text-h6 text-weight-bold">{{ pepper.observationLog?.length || 0 }}</div>
+          <div 
+            class="stat-item cursor-pointer"
+            @click="openHistoryTab('observation')"
+          >
+            <div class="text-caption text-grey-6 q-mb-xs">Наблюдений</div>
+            <div class="text-h6 text-weight-bold">{{ pepper.observationLog?.length || 0 }}</div>
+          </div>
         </div>
       </div>
 
       <!-- Иконки действий -->
       <div class="row items-center justify-center q-gutter-sm">
-        <q-btn flat round color="primary" icon="info" size="sm" @click="showDetails = true" />
-        <q-btn flat round color="info" icon="analytics" size="sm" @click="showCharts = true" />
-        <q-btn flat round color="secondary" icon="history" size="sm" @click="showHistory = true" />
-        <q-btn flat round color="accent" icon="flash_on" size="sm" @click="showQuickActions = true" />
+        <q-btn 
+          flat 
+          round 
+          color="info" 
+          icon="analytics" 
+          size="sm" 
+          @click="showCharts = true"
+        >
+          <q-tooltip>Графики и статистика</q-tooltip>
+        </q-btn>
+        <q-btn 
+          flat 
+          round 
+          color="secondary" 
+          icon="history" 
+          size="sm" 
+          @click="showHistory = true"
+        >
+          <q-tooltip>История ухода</q-tooltip>
+        </q-btn>
+        <q-btn 
+          flat 
+          round 
+          color="accent" 
+          icon="flash_on" 
+          size="sm" 
+          @click="showQuickActions = true"
+        >
+          <q-tooltip>Быстрые действия</q-tooltip>
+        </q-btn>
         <q-btn
           flat
           round
@@ -118,7 +159,9 @@
           :icon="pepper.isFavorite ? 'star' : 'star_border'"
           size="sm"
           @click="toggleFavorite"
-        />
+        >
+          <q-tooltip>{{ pepper.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное' }}</q-tooltip>
+        </q-btn>
       </div>
     </q-card-section>
 
@@ -140,30 +183,17 @@
     />
 
     <!-- Новые компоненты -->
-    <PepperDetailsDialog v-model="showDetails" :pepper="pepper" />
-
-    <PepperHistoryManager v-model="showHistory" :pepper="pepper" @update="handleUpdate" />
+    <PepperHistoryManager 
+      v-model="showHistory" 
+      :pepper="pepper" 
+      :initial-tab="historyInitialTab"
+      @update="handleUpdate" 
+    />
 
     <PepperQuickActions v-model="showQuickActions" :pepper="pepper" @update="handleUpdate" />
 
-    <!-- Заглушка для графиков -->
-    <q-dialog v-model="showCharts">
-      <q-card style="min-width: 600px">
-        <q-card-section>
-          <div class="text-h6">Графики роста "{{ pepper.name }}"</div>
-        </q-card-section>
-        <q-card-section class="text-center q-pa-xl">
-          <q-icon name="analytics" size="100px" color="grey-4" />
-          <div class="text-h6 q-mt-md text-grey-6">Графики в разработке</div>
-          <div class="text-body2 text-grey-5 q-mt-sm">
-            Здесь будут отображаться графики роста, полива и удобрений
-          </div>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Закрыть" color="primary" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <!-- Графики и статистика -->
+    <PepperChartsDialog v-model="showCharts" :pepper="pepper" />
   </q-card>
 </template>
 
@@ -171,10 +201,10 @@
 import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import type { Pepper, HeatLevel } from './models';
-import PepperDetailsDialog from './PepperDetailsDialog.vue';
 import PepperHistoryManager from './PepperHistoryManager.vue';
 import PepperQuickActions from './PepperQuickActions.vue';
 import PepperVarietyInfo from './PepperVarietyInfo.vue';
+import PepperChartsDialog from './PepperChartsDialog.vue';
 import DeletePepperDialog from './DeletePepperDialog.vue';
 import ChangeStageDialog from './ChangeStageDialog.vue';
 import ChangeLocationDialog from './ChangeLocationDialog.vue';
@@ -195,7 +225,6 @@ const $q = useQuasar();
 const showDeleteDialog = ref(false);
 const showStageDialog = ref(false);
 const showLocationDialog = ref(false);
-const showDetails = ref(false);
 const showHistory = ref(false);
 const showQuickActions = ref(false);
 const showCharts = ref(false);
@@ -350,6 +379,11 @@ function handleUpdate(updates: Partial<Pepper>) {
     icon: 'check_circle',
   });
 }
+
+function openHistoryTab(tab: 'watering' | 'fertilizing' | 'observation') {
+  historyInitialTab.value = tab;
+  showHistory.value = true;
+}
 </script>
 
 <style scoped>
@@ -393,6 +427,17 @@ function handleUpdate(updates: Partial<Pepper>) {
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+}
+
+.stat-item {
+  transition: all 0.2s ease;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.stat-item:hover {
+  background-color: rgba(97, 137, 47, 0.1);
+  transform: scale(1.05);
 }
 
 /* Улучшения для мобильных устройств */

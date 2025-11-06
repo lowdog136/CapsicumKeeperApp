@@ -79,10 +79,16 @@ import PepperFertilizingHistoryManager from './PepperFertilizingHistoryManager.v
 import PepperTreatmentHistoryManager from './PepperTreatmentHistoryManager.vue';
 import PepperObservationHistoryManager from './PepperObservationHistoryManager.vue';
 
-const props = defineProps<{
-  modelValue: boolean;
-  pepper: Pepper;
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    pepper: Pepper;
+    initialTab?: 'watering' | 'fertilizing' | 'treatment' | 'observation';
+  }>(),
+  {
+    initialTab: 'watering',
+  }
+);
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void;
@@ -109,7 +115,26 @@ const showDialog = computed({
   set: (value: boolean) => emit('update:modelValue', value),
 });
 
-const activeTab = ref('watering');
+const activeTab = ref<'watering' | 'fertilizing' | 'treatment' | 'observation'>(props.initialTab);
+
+// Синхронизируем activeTab с initialTab при открытии диалога
+watch(
+  () => props.modelValue,
+  (isOpen) => {
+    if (isOpen) {
+      activeTab.value = props.initialTab;
+    }
+  }
+);
+
+watch(
+  () => props.initialTab,
+  (newTab) => {
+    if (showDialog.value) {
+      activeTab.value = newTab;
+    }
+  }
+);
 
 // Функции обновления истории
 function updateWateringHistory(history: WateringEntry[]) {
