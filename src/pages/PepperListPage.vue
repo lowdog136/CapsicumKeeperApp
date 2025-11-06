@@ -93,6 +93,7 @@
               <PepperCard
                 :pepper="pepper"
                 @update:stage="updateStage(pepper.id, $event)"
+                @update:location="updateLocation(pepper.id, $event)"
                 @delete="handleDelete"
                 @toggle-favorite="handleToggleFavorite"
                 @edit="handleEdit"
@@ -116,12 +117,12 @@
       </div>
     </div>
 
-    <!-- Диалог редактирования наименования -->
-    <EditNameDialog
+    <!-- Диалог редактирования перца -->
+    <PepperEditForm
       v-if="editingPepper"
-      v-model="showEditNameDialog"
-      :current-name="editingPepper.name"
-      @save="saveEditName"
+      v-model="showEditDialog"
+      :pepper="editingPepper"
+      @save="saveEdit"
     />
   </q-page>
 </template>
@@ -135,7 +136,7 @@ import { useRouter } from 'vue-router';
 import PepperCard from 'components/PepperCard.vue';
 import MigrationPanel from 'components/MigrationPanel.vue';
 import PepperFilters from 'components/PepperFilters.vue';
-import EditNameDialog from 'components/EditNameDialog.vue';
+import PepperEditForm from 'components/PepperEditForm.vue';
 import type { Pepper } from 'components/models';
 import { ref, computed, onMounted, watch } from 'vue';
 
@@ -388,6 +389,66 @@ async function updateStage(id: string, newStage: Pepper['stage']) {
   }
 }
 
+async function updateLocation(id: string, newLocation: Pepper['location']) {
+  try {
+    console.log('🔄 updateLocation вызвана:', { id, newLocation });
+    const pepper = peppers.value.find((p) => p.id === id);
+    if (!pepper) {
+      throw new Error('Перец не найден');
+    }
+
+    console.log('📋 Текущее место посадки перца:', pepper.location);
+
+    // Проверяем, изменилось ли место посадки
+    const locationChanged =
+      pepper.location?.type !== newLocation?.type ||
+      pepper.location?.potVolume !== newLocation?.potVolume;
+
+    if (locationChanged) {
+      const today = new Date().toISOString().slice(0, 10);
+      const newLocationHistory = pepper.locationHistory ? [...pepper.locationHistory] : [];
+      
+      // Добавляем новую запись в историю
+      const locationHistoryEntry: {
+        date: string;
+        type: Pepper['location']['type'];
+        potVolume?: string;
+      } = {
+        date: today,
+        type: newLocation.type,
+      };
+      if (newLocation.potVolume !== undefined) {
+        locationHistoryEntry.potVolume = newLocation.potVolume;
+      }
+      newLocationHistory.push(locationHistoryEntry);
+
+      console.log('💾 Сохраняем изменения:', { location: newLocation, locationHistory: newLocationHistory });
+
+      await pepperFirestore.updatePepper(id, {
+        location: newLocation,
+        locationHistory: newLocationHistory,
+      });
+
+      console.log('✅ Место посадки успешно обновлено в Firestore');
+
+      $q.notify({
+        color: 'positive',
+        message: 'Место посадки обновлено',
+        icon: 'check_circle',
+      });
+    } else {
+      console.log('ℹ️ Место посадки не изменилось, обновление не требуется');
+    }
+  } catch (error) {
+    console.error('❌ Ошибка обновления места посадки:', error);
+    $q.notify({
+      color: 'negative',
+      message: 'Ошибка обновления места посадки: ' + (error as Error).message,
+      icon: 'error',
+    });
+  }
+}
+
 async function handleDelete(id: string) {
   try {
     await pepperFirestore.deletePepper(id);
@@ -428,22 +489,22 @@ async function handleToggleFavorite(id: string) {
 }
 
 const editingPepper = ref<Pepper | null>(null);
-const showEditNameDialog = ref(false);
+const showEditDialog = ref(false);
 
 function handleEdit(pepper: Pepper) {
   editingPepper.value = pepper;
-  showEditNameDialog.value = true;
+  showEditDialog.value = true;
 }
 
-async function saveEditName(newName: string) {
+async function saveEdit(updates: Partial<Pepper>) {
   if (!editingPepper.value) return;
 
   try {
-    await handleUpdate(editingPepper.value.id, { name: newName });
+    await handleUpdate(editingPepper.value.id, updates);
     editingPepper.value = null;
-    showEditNameDialog.value = false;
+    showEditDialog.value = false;
   } catch (error) {
-    console.error('Error saving name:', error);
+    console.error('Error saving edit:', error);
   }
 }
 

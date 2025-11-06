@@ -1,12 +1,19 @@
 <template>
   <q-card class="my-card q-mb-md">
-    <q-img
-      :src="pepper.photoUrl || 'https://via.placeholder.com/400x200?text=No+Image'"
-      :alt="pepper.name"
-      style="height: 200px; object-fit: cover"
-    />
+    <div class="pepper-image-container">
+      <q-img
+        v-if="pepper.photoUrl"
+        :src="pepper.photoUrl"
+        :alt="pepper.name"
+        style="height: 200px; object-fit: cover"
+      />
+      <div v-else class="default-image">
+        <q-icon name="local_florist" size="80px" color="grey-4" />
+        <div class="text-grey-5 text-body2 q-mt-sm">Нет фото</div>
+      </div>
+    </div>
 
-    <q-card-section>
+    <q-card-section class="card-content">
       <!-- Заголовок и основные действия -->
       <div class="row items-center justify-between q-mb-sm">
         <div class="text-h6">{{ pepper.name }}</div>
@@ -31,32 +38,41 @@
       </div>
 
       <!-- Описание -->
-      <div class="q-mb-sm">
-        <span>{{ pepper.description }}</span>
+      <div class="q-mb-md">
+        <div class="text-caption text-grey-6 q-mb-xs">Описание</div>
+        <div class="text-body2">{{ pepper.description || 'без описания' }}</div>
       </div>
 
       <!-- Основная информация -->
-      <div class="row q-col-gutter-sm q-mb-sm">
+      <div class="row q-col-gutter-sm q-mb-md">
         <div class="col-6">
-          <div class="text-caption text-grey-6">Дата посадки</div>
+          <div class="text-caption text-grey-6 q-mb-xs">Дата посадки</div>
           <div class="text-body2">{{ formatDate(pepper.plantingDate) }}</div>
         </div>
         <div class="col-6">
-          <div class="text-caption text-grey-6">Растет</div>
+          <div class="text-caption text-grey-6 q-mb-xs">Растет</div>
           <div class="text-body2">{{ daysSincePlanting }} дн.</div>
         </div>
       </div>
 
       <!-- Место посадки -->
-      <div class="q-mb-sm">
-        <div class="text-caption text-grey-6">Место посадки</div>
-        <div class="text-body2">{{ locationText }}</div>
+      <div class="q-mb-md">
+        <div class="text-caption text-grey-6 q-mb-xs">Место посадки</div>
+        <div class="row items-center q-gutter-xs">
+          <q-chip
+            :color="getLocationColor(pepper.location?.type)"
+            text-color="white"
+            size="sm"
+            :label="locationText"
+          />
+          <q-btn flat round icon="edit" size="xs" @click="changeLocation" />
+        </div>
       </div>
 
       <!-- Стадия роста -->
-      <div class="q-mb-sm">
-        <div class="text-caption text-grey-6">Стадия роста</div>
-        <div class="row items-center q-gutter-sm">
+      <div class="q-mb-md">
+        <div class="text-caption text-grey-6 q-mb-xs">Стадия роста</div>
+        <div class="row items-center q-gutter-xs">
           <q-chip
             :color="getStageColor(pepper.stage)"
             text-color="white"
@@ -67,25 +83,44 @@
         </div>
       </div>
 
-      <!-- Краткая статистика -->
-      <PepperCardStats :pepper="pepper" />
     </q-card-section>
 
     <q-separator />
 
-    <q-card-actions align="right">
-      <q-btn flat round color="primary" icon="info" @click="showDetails = true" class="q-mr-auto" />
-      <q-btn flat round color="info" icon="analytics" @click="showCharts = true" />
-      <q-btn flat round color="secondary" icon="history" @click="showHistory = true" />
-      <q-btn flat round color="accent" icon="flash_on" @click="showQuickActions = true" />
-      <q-btn
-        flat
-        round
-        :color="pepper.isFavorite ? 'amber' : 'grey'"
-        :icon="pepper.isFavorite ? 'star' : 'star_border'"
-        @click="toggleFavorite"
-      />
-    </q-card-actions>
+    <!-- Нижний блок: Статистика и действия -->
+    <q-card-section class="card-footer q-pt-sm q-pb-sm">
+      <!-- Статистика -->
+      <div class="row q-col-gutter-sm q-mb-md">
+        <div class="col-4 text-center">
+          <div class="text-caption text-grey-6 q-mb-xs">Поливов</div>
+          <div class="text-h6 text-weight-bold">{{ pepper.wateringHistory?.length || 0 }}</div>
+        </div>
+        <div class="col-4 text-center">
+          <div class="text-caption text-grey-6 q-mb-xs">Удобрений</div>
+          <div class="text-h6 text-weight-bold">{{ pepper.fertilizingHistory?.length || 0 }}</div>
+        </div>
+        <div class="col-4 text-center">
+          <div class="text-caption text-grey-6 q-mb-xs">Наблюдений</div>
+          <div class="text-h6 text-weight-bold">{{ pepper.observationLog?.length || 0 }}</div>
+        </div>
+      </div>
+
+      <!-- Иконки действий -->
+      <div class="row items-center justify-center q-gutter-sm">
+        <q-btn flat round color="primary" icon="info" size="sm" @click="showDetails = true" />
+        <q-btn flat round color="info" icon="analytics" size="sm" @click="showCharts = true" />
+        <q-btn flat round color="secondary" icon="history" size="sm" @click="showHistory = true" />
+        <q-btn flat round color="accent" icon="flash_on" size="sm" @click="showQuickActions = true" />
+        <q-btn
+          flat
+          round
+          :color="pepper.isFavorite ? 'amber' : 'grey'"
+          :icon="pepper.isFavorite ? 'star' : 'star_border'"
+          size="sm"
+          @click="toggleFavorite"
+        />
+      </div>
+    </q-card-section>
 
     <!-- Диалог удаления -->
     <DeletePepperDialog
@@ -96,6 +131,13 @@
 
     <!-- Диалог изменения стадии -->
     <ChangeStageDialog v-model="showStageDialog" :current-stage="pepper.stage" @save="saveStage" />
+
+    <!-- Диалог изменения места посадки -->
+    <ChangeLocationDialog
+      v-model="showLocationDialog"
+      :current-location="pepper.location"
+      @save="saveLocation"
+    />
 
     <!-- Новые компоненты -->
     <PepperDetailsDialog v-model="showDetails" :pepper="pepper" />
@@ -133,13 +175,14 @@ import PepperDetailsDialog from './PepperDetailsDialog.vue';
 import PepperHistoryManager from './PepperHistoryManager.vue';
 import PepperQuickActions from './PepperQuickActions.vue';
 import PepperVarietyInfo from './PepperVarietyInfo.vue';
-import PepperCardStats from './PepperCardStats.vue';
 import DeletePepperDialog from './DeletePepperDialog.vue';
 import ChangeStageDialog from './ChangeStageDialog.vue';
+import ChangeLocationDialog from './ChangeLocationDialog.vue';
 
 const props = defineProps<{ pepper: Pepper }>();
 const emit = defineEmits<{
   (e: 'update:stage', value: Pepper['stage']): void;
+  (e: 'update:location', value: Pepper['location']): void;
   (e: 'delete', id: string): void;
   (e: 'toggle-favorite', id: string): void;
   (e: 'edit', pepper: Pepper): void;
@@ -151,6 +194,7 @@ const $q = useQuasar();
 // Состояние
 const showDeleteDialog = ref(false);
 const showStageDialog = ref(false);
+const showLocationDialog = ref(false);
 const showDetails = ref(false);
 const showHistory = ref(false);
 const showQuickActions = ref(false);
@@ -176,12 +220,37 @@ const daysSincePlanting = computed(() => {
 });
 
 const locationText = computed(() => {
-  if (props.pepper.location?.type === 'горшок') {
-    return `Горшок, объем: ${props.pepper.location?.potVolume ?? '-'}`;
+  const location = props.pepper.location;
+  
+  // Если location отсутствует
+  if (!location) {
+    return '-';
   }
-  return props.pepper.location?.type
-    ? props.pepper.location.type.charAt(0).toUpperCase() + props.pepper.location.type.slice(1)
-    : '-';
+  
+  // Если location - это строка (старый формат данных)
+  if (typeof location === 'string') {
+    return location;
+  }
+  
+  // Если location не является объектом
+  if (typeof location !== 'object' || Array.isArray(location)) {
+    return '-';
+  }
+  
+  // Если location.type отсутствует или не является строкой
+  if (!location.type || typeof location.type !== 'string') {
+    return '-';
+  }
+  
+  // Обработка типа "горшок"
+  if (location.type === 'горшок') {
+    const volume = location.potVolume || '-';
+    return `Горшок, объем: ${volume}`;
+  }
+  
+  // Для остальных типов - форматируем первую букву заглавной
+  const locationType = String(location.type);
+  return locationType.charAt(0).toUpperCase() + locationType.slice(1);
 });
 
 const lastWatering = computed(() => {
@@ -199,7 +268,7 @@ function getHeatLevelInfo(heatLevel: HeatLevel) {
   const heatLevels = {
     'no-heat': { name: 'Без остроты', color: 'green', shuRange: '0 SHU' },
     'very-mild': { name: 'Очень мягкий', color: 'light-green', shuRange: '100-500 SHU' },
-    mild: { name: 'Мягкий', color: 'yellow', shuRange: '500-2500 SHU' },
+    mild: { name: 'Мягкий', color: 'mild-custom', shuRange: '500-2500 SHU' },
     medium: { name: 'Средний', color: 'orange', shuRange: '2500-8000 SHU' },
     hot: { name: 'Острый', color: 'red', shuRange: '8000-50000 SHU' },
     'very-hot': { name: 'Очень острый', color: 'deep-orange', shuRange: '50000-100000 SHU' },
@@ -217,6 +286,18 @@ function getStageColor(stage: Pepper['stage']) {
     'сбор урожая': 'purple',
   };
   return colors[stage] || 'grey';
+}
+
+function getLocationColor(locationType?: Pepper['location']['type']) {
+  if (!locationType) return 'grey';
+  const colors: Record<string, string> = {
+    грунт: 'brown',
+    теплица: 'teal',
+    огород: 'green',
+    горшок: 'amber',
+    'кассета для проращивания': 'blue',
+  };
+  return colors[locationType] || 'grey';
 }
 
 function formatDate(dateString: string) {
@@ -251,6 +332,15 @@ function saveStage(stage: Pepper['stage']) {
   }
 }
 
+function changeLocation() {
+  showLocationDialog.value = true;
+}
+
+function saveLocation(location: Pepper['location']) {
+  emit('update:location', location);
+  showLocationDialog.value = false;
+}
+
 function handleUpdate(updates: Partial<Pepper>) {
   // Эмитим событие для обновления перца
   emit('update', updates);
@@ -267,11 +357,42 @@ function handleUpdate(updates: Partial<Pepper>) {
   transition: all 0.3s ease;
   border-radius: 12px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .my-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-footer {
+  margin-top: auto;
+}
+
+.pepper-image-container {
+  height: 200px;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background-color: #f5f5f5;
+}
+
+.default-image {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
 }
 
 /* Улучшения для мобильных устройств */

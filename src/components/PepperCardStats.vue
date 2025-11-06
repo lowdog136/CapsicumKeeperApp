@@ -1,18 +1,18 @@
 <template>
   <div>
     <!-- Краткая статистика -->
-    <div class="row q-col-gutter-sm q-mb-sm">
+    <div class="row q-col-gutter-sm">
       <div class="col-4">
-        <div class="text-caption text-grey-6">Поливов</div>
-        <div class="text-body2">{{ pepper.wateringHistory?.length || 0 }}</div>
+        <div class="text-caption text-grey-6 q-mb-xs">Поливов</div>
+        <div class="text-body2 text-weight-medium">{{ pepper.wateringHistory?.length || 0 }}</div>
       </div>
       <div class="col-4">
-        <div class="text-caption text-grey-6">Удобрений</div>
-        <div class="text-body2">{{ pepper.fertilizingHistory?.length || 0 }}</div>
+        <div class="text-caption text-grey-6 q-mb-xs">Удобрений</div>
+        <div class="text-body2 text-weight-medium">{{ pepper.fertilizingHistory?.length || 0 }}</div>
       </div>
       <div class="col-4">
-        <div class="text-caption text-grey-6">Наблюдений</div>
-        <div class="text-body2">{{ pepper.observationLog?.length || 0 }}</div>
+        <div class="text-caption text-grey-6 q-mb-xs">Наблюдений</div>
+        <div class="text-body2 text-weight-medium">{{ pepper.observationLog?.length || 0 }}</div>
       </div>
     </div>
 

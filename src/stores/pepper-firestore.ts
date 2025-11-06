@@ -5,7 +5,7 @@ import {
   collection,
   getDocs,
   addDoc,
-  doc,
+  doc as firestoreDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -63,14 +63,31 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
         (querySnapshot) => {
           console.log('✅ Получены изменения перцев, документов:', querySnapshot.size);
 
-          // Обновляем массив перцев
-          peppers.value = querySnapshot.docs.map(
-            (doc) =>
-              ({
-                id: doc.id,
-                ...doc.data(),
-              }) as Pepper,
-          );
+          // Обновляем массив перцев с нормализацией данных для отображения
+          peppers.value = querySnapshot.docs.map((docSnapshot) => {
+            const data = docSnapshot.data();
+            const pepper = {
+              id: docSnapshot.id,
+              ...data,
+            } as Pepper;
+
+            // Нормализуем поле location только для отображения, если оно отсутствует или некорректно
+            // Не обновляем базу автоматически - это делается только при явном редактировании
+            if (!pepper.location || typeof pepper.location !== 'object' || Array.isArray(pepper.location)) {
+              pepper.location = {
+                type: 'грунт' as Pepper['location']['type'],
+                potVolume: '',
+              };
+            } else if (!pepper.location.type || typeof pepper.location.type !== 'string') {
+              // Если location есть, но type отсутствует или некорректен
+              pepper.location = {
+                type: 'грунт' as Pepper['location']['type'],
+                potVolume: pepper.location.potVolume || '',
+              };
+            }
+
+            return pepper;
+          });
 
           loading.value = false;
         },
@@ -121,7 +138,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
         const pepperData = pepperDoc.data();
 
         // Добавляем userId к существующему перцу
-        await updateDoc(doc(db, 'peppers', pepperDoc.id), {
+        await updateDoc(firestoreDoc(db, 'peppers', pepperDoc.id), {
           userId: userStore.user!.uid,
           updatedAt: new Date().toISOString(),
         });
@@ -161,7 +178,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
         const pepperData = pepperDoc.data();
 
         // Обновляем userId для всех перцев
-        await updateDoc(doc(db, 'peppers', pepperDoc.id), {
+        await updateDoc(firestoreDoc(db, 'peppers', pepperDoc.id), {
           userId: userStore.user!.uid,
           updatedAt: new Date().toISOString(),
         });
@@ -201,7 +218,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
         const pepperData = pepperDoc.data();
 
         // Удаляем перец
-        await deleteDoc(doc(db, 'peppers', pepperDoc.id));
+        await deleteDoc(firestoreDoc(db, 'peppers', pepperDoc.id));
 
         console.log(`Удален перец "${pepperData.name}" с ID: ${pepperDoc.id}`);
         deletedCount++;
@@ -307,7 +324,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
 
       console.log('Updating pepper with data:', updateData);
 
-      await updateDoc(doc(db, 'peppers', id), updateData);
+      await updateDoc(firestoreDoc(db, 'peppers', id), updateData);
       // onSnapshot автоматически обновит список перцев
     } catch (error) {
       console.error('Error updating pepper:', error);
@@ -317,7 +334,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
 
   const deletePepper = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'peppers', id));
+      await deleteDoc(firestoreDoc(db, 'peppers', id));
       // onSnapshot автоматически обновит список перцев
     } catch (error) {
       console.error('Error deleting pepper:', error);

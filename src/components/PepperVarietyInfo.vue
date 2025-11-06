@@ -4,7 +4,16 @@
       <q-card-section class="q-pa-sm">
         <div class="row items-center q-gutter-xs q-mb-xs">
           <q-chip
-            :color="getHeatLevelInfo(pepper.varietyInfo.heatLevel).color"
+            :class="
+              getHeatLevelInfo(pepper.varietyInfo.heatLevel).color === 'mild-custom'
+                ? 'mild-heat-chip'
+                : ''
+            "
+            :color="
+              getHeatLevelInfo(pepper.varietyInfo.heatLevel).color === 'mild-custom'
+                ? undefined
+                : getHeatLevelInfo(pepper.varietyInfo.heatLevel).color
+            "
             text-color="white"
             size="sm"
             :label="getHeatLevelInfo(pepper.varietyInfo.heatLevel).name"
@@ -43,7 +52,12 @@
           </div>
         </div>
         <div class="text-caption q-mt-xs text-grey-7">
-          Цвета: {{ pepper.varietyInfo.color.join(', ') }}
+          Цвета:
+          {{
+            pepper.varietyInfo.color && pepper.varietyInfo.color.length > 0
+              ? pepper.varietyInfo.color.join(', ')
+              : 'не указаны'
+          }}
         </div>
       </q-card-section>
     </q-card>
@@ -63,7 +77,7 @@ function getHeatLevelInfo(heatLevel: HeatLevel) {
   const heatLevels = {
     'no-heat': { name: 'Без остроты', color: 'green', shuRange: '0 SHU' },
     'very-mild': { name: 'Очень мягкий', color: 'light-green', shuRange: '100-500 SHU' },
-    mild: { name: 'Мягкий', color: 'yellow', shuRange: '500-2500 SHU' },
+    mild: { name: 'Мягкий', color: 'mild-custom', shuRange: '500-2500 SHU' },
     medium: { name: 'Средний', color: 'orange', shuRange: '2500-8000 SHU' },
     hot: { name: 'Острый', color: 'red', shuRange: '8000-50000 SHU' },
     'very-hot': { name: 'Очень острый', color: 'deep-orange', shuRange: '50000-100000 SHU' },
@@ -77,6 +91,12 @@ function getHeatLevelInfo(heatLevel: HeatLevel) {
 /* Кастомный цвет для chip с species (Capsicum chinense) */
 .species-chip {
   background-color: #61892f !important;
+  color: #ffffff !important;
+}
+
+/* Кастомный темный цвет для тега "Мягкий" */
+.mild-heat-chip {
+  background-color: #e65100 !important;
   color: #ffffff !important;
 }
 </style>

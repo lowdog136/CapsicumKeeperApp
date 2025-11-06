@@ -135,7 +135,9 @@ const editForm = ref({
   description: props.pepper.description,
   stage: props.pepper.stage,
   plantingDate: props.pepper.plantingDate,
-  location: { ...props.pepper.location },
+  location: props.pepper.location
+    ? { ...props.pepper.location }
+    : { type: 'грунт' as Pepper['location']['type'], potVolume: '' },
   soilExtras: props.pepper.soilExtras
     ? { ...props.pepper.soilExtras }
     : {
@@ -174,7 +176,9 @@ watch(
       description: val.description,
       stage: val.stage,
       plantingDate: val.plantingDate,
-      location: { ...val.location },
+      location: val.location
+        ? { ...val.location }
+        : { type: 'грунт' as Pepper['location']['type'], potVolume: '' },
       soilExtras: val.soilExtras
         ? { ...val.soilExtras }
         : {
@@ -207,6 +211,29 @@ function saveEdit() {
     newStageHistory.push({ date: today, stage: editForm.value.stage });
     updatedFields.stage = editForm.value.stage;
     updatedFields.stageHistory = newStageHistory;
+  }
+
+  // Если изменилось место посадки, добавляем в историю
+  const locationChanged =
+    props.pepper.location?.type !== editForm.value.location?.type ||
+    props.pepper.location?.potVolume !== editForm.value.location?.potVolume;
+  
+  if (locationChanged) {
+    const today = new Date().toISOString().slice(0, 10);
+    const newLocationHistory = props.pepper.locationHistory ? [...props.pepper.locationHistory] : [];
+    const locationHistoryEntry: {
+      date: string;
+      type: Pepper['location']['type'];
+      potVolume?: string;
+    } = {
+      date: today,
+      type: editForm.value.location.type,
+    };
+    if (editForm.value.location.potVolume !== undefined) {
+      locationHistoryEntry.potVolume = editForm.value.location.potVolume;
+    }
+    newLocationHistory.push(locationHistoryEntry);
+    updatedFields.locationHistory = newLocationHistory;
   }
 
   emit('save', updatedFields);

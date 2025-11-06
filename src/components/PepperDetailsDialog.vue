@@ -51,7 +51,8 @@
                       <div class="text-subtitle2 q-mb-sm">Информация о сорте</div>
                       <div class="row items-center q-gutter-xs q-mb-sm">
                         <q-chip
-                          :color="getHeatLevelInfo(pepper.varietyInfo.heatLevel).color"
+                          :class="getHeatLevelInfo(pepper.varietyInfo.heatLevel).color === 'mild-custom' ? 'mild-heat-chip' : ''"
+                          :color="getHeatLevelInfo(pepper.varietyInfo.heatLevel).color === 'mild-custom' ? undefined : getHeatLevelInfo(pepper.varietyInfo.heatLevel).color"
                           text-color="white"
                           size="sm"
                           :label="getHeatLevelInfo(pepper.varietyInfo.heatLevel).name"
@@ -268,12 +269,37 @@ const daysSincePlanting = computed(() => {
 });
 
 const locationText = computed(() => {
-  if (props.pepper.location?.type === 'горшок') {
-    return `Горшок, объем: ${props.pepper.location?.potVolume ?? '-'}`;
+  const location = props.pepper.location;
+  
+  // Если location отсутствует
+  if (!location) {
+    return '-';
   }
-  return props.pepper.location?.type
-    ? props.pepper.location.type.charAt(0).toUpperCase() + props.pepper.location.type.slice(1)
-    : '-';
+  
+  // Если location - это строка (старый формат данных)
+  if (typeof location === 'string') {
+    return location;
+  }
+  
+  // Если location не является объектом
+  if (typeof location !== 'object' || Array.isArray(location)) {
+    return '-';
+  }
+  
+  // Если location.type отсутствует или не является строкой
+  if (!location.type || typeof location.type !== 'string') {
+    return '-';
+  }
+  
+  // Обработка типа "горшок"
+  if (location.type === 'горшок') {
+    const volume = location.potVolume || '-';
+    return `Горшок, объем: ${volume}`;
+  }
+  
+  // Для остальных типов - форматируем первую букву заглавной
+  const locationType = String(location.type);
+  return locationType.charAt(0).toUpperCase() + locationType.slice(1);
 });
 
 const totalWatered = computed(() =>
@@ -293,7 +319,7 @@ function getHeatLevelInfo(heatLevel: HeatLevel) {
   const heatLevels = {
     'no-heat': { name: 'Без остроты', color: 'green', shuRange: '0 SHU' },
     'very-mild': { name: 'Очень мягкий', color: 'light-green', shuRange: '100-500 SHU' },
-    mild: { name: 'Мягкий', color: 'yellow', shuRange: '500-2500 SHU' },
+    mild: { name: 'Мягкий', color: 'mild-custom', shuRange: '500-2500 SHU' },
     medium: { name: 'Средний', color: 'orange', shuRange: '2500-8000 SHU' },
     hot: { name: 'Острый', color: 'red', shuRange: '8000-50000 SHU' },
     'very-hot': { name: 'Очень острый', color: 'deep-orange', shuRange: '50000-100000 SHU' },
@@ -318,3 +344,11 @@ function formatDate(dateString: string) {
   return new Date(dateString).toLocaleDateString('ru-RU');
 }
 </script>
+
+<style scoped>
+/* Кастомный темный цвет для тега "Мягкий" */
+.mild-heat-chip {
+  background-color: #e65100 !important;
+  color: #ffffff !important;
+}
+</style>
