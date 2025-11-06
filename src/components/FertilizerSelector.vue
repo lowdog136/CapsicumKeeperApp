@@ -20,7 +20,7 @@
         <q-separator class="q-my-md" />
         <div class="text-center">
           <q-btn
-            color="secondary"
+            class="darker-green-btn"
             icon="add"
             label="Добавить новое удобрение"
             @click="showAddDialog = true"
@@ -109,5 +109,15 @@ function addNewFertilizer(fertilizer: Fertilizer) {
 .fertilizer-list {
   max-height: 400px;
   overflow-y: auto;
+}
+
+/* Темно-зеленая кнопка добавления удобрения */
+.darker-green-btn {
+  background-color: #61892f !important;
+  color: #ffffff !important;
+}
+
+.darker-green-btn:hover {
+  background-color: #4a6b23 !important;
 }
 </style>

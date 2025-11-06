@@ -68,15 +68,26 @@
           <div class="q-mt-md">Загрузка сортов...</div>
         </div>
 
+        <!-- Сообщение когда нет поиска/фильтра -->
+        <div v-else-if="!hasActiveSearch" class="text-center q-pa-xl">
+          <q-icon name="search" size="100px" color="grey-4" />
+          <div class="text-h6 q-mt-md text-grey-6">Начните поиск</div>
+          <div class="text-body2 text-grey-5 q-mt-sm">
+            Введите название сорта или выберите фильтр, чтобы увидеть результаты
+          </div>
+        </div>
+
+        <!-- Сообщение когда ничего не найдено -->
         <div v-else-if="filteredVarieties.length === 0" class="text-center q-pa-xl">
           <q-icon name="search_off" size="100px" color="grey-4" />
           <div class="text-h6 q-mt-md text-grey-6">Сорта не найдены</div>
           <div class="text-body2 text-grey-5">Попробуйте изменить параметры поиска</div>
         </div>
 
+        <!-- Результаты поиска -->
         <div v-else class="row q-col-gutter-md">
           <div
-            v-for="variety in filteredVarieties.slice(0, 12)"
+            v-for="variety in filteredVarieties"
             :key="variety.id"
             class="col-12 col-md-6 col-lg-4"
           >
@@ -151,20 +162,51 @@ const searchTerm = ref('');
 const filters = ref({ heatLevel: null, species: null });
 const selectedVariety = ref<PepperVariety | null>(null);
 
-const filteredVarieties = computed(() => {
-  let arr = props.varieties;
-  if (searchTerm.value) {
-    const q = searchTerm.value.trim().toLowerCase();
-    arr = arr.filter((v) => v.name?.toLowerCase().includes(q));
-  }
-  if (filters.value.species) {
-    arr = arr.filter((v) => v.species === filters.value.species);
-  }
-  if (filters.value.heatLevel) {
-    arr = arr.filter((v) => v.heatLevel === filters.value.heatLevel);
-  }
-  return arr;
+// Флаг: есть ли активный поиск или фильтр
+const hasActiveSearch = computed(() => {
+  return (
+    (searchTerm.value && searchTerm.value.trim().length > 0) ||
+    filters.value.species !== null ||
+    filters.value.heatLevel !== null
+  );
 });
+
+// Debounce для поиска в диалоге
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+const filteredVarieties = ref<PepperVariety[]>([]);
+
+// Обновляем фильтрованные результаты с debounce
+watch([searchTerm, () => filters.value.species, () => filters.value.heatLevel], ([q, s, h]) => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+
+  searchTimeout = setTimeout(() => {
+    // Если нет поиска и фильтров, не показываем ничего
+    const hasQuery = q && q.trim().length > 0;
+    const hasSpeciesFilter = s !== null;
+    const hasHeatFilter = h !== null;
+
+    if (!hasQuery && !hasSpeciesFilter && !hasHeatFilter) {
+      filteredVarieties.value = [];
+      return;
+    }
+
+    // Фильтруем только если есть поиск или фильтр
+    let arr = props.varieties;
+    if (hasQuery) {
+      const query = q.trim().toLowerCase();
+      arr = arr.filter((v) => v.name?.toLowerCase().includes(query));
+    }
+    if (hasSpeciesFilter) {
+      arr = arr.filter((v) => v.species === s);
+    }
+    if (hasHeatFilter) {
+      arr = arr.filter((v) => v.heatLevel === h);
+    }
+    filteredVarieties.value = arr;
+  }, 200); // 200ms debounce для диалога
+}, { immediate: false }); // Убрали immediate: true, чтобы не показывать все сразу
 
 function getHeatLevelInfo(variety: PepperVariety) {
   if (props.useV2) {
@@ -200,4 +242,15 @@ function handleDoubleClick(variety: PepperVariety) {
   selectVariety(variety);
   confirmSelection();
 }
+
+// Очищаем результаты при закрытии диалога
+watch(showDialog, (isOpen) => {
+  if (!isOpen) {
+    // Сбрасываем поиск и фильтры при закрытии
+    searchTerm.value = '';
+    filters.value = { heatLevel: null, species: null };
+    filteredVarieties.value = [];
+    selectedVariety.value = null;
+  }
+});
 </script>

@@ -115,6 +115,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Диалог редактирования наименования -->
+    <EditNameDialog
+      v-if="editingPepper"
+      v-model="showEditNameDialog"
+      :current-name="editingPepper.name"
+      @save="saveEditName"
+    />
   </q-page>
 </template>
 
@@ -127,6 +135,7 @@ import { useRouter } from 'vue-router';
 import PepperCard from 'components/PepperCard.vue';
 import MigrationPanel from 'components/MigrationPanel.vue';
 import PepperFilters from 'components/PepperFilters.vue';
+import EditNameDialog from 'components/EditNameDialog.vue';
 import type { Pepper } from 'components/models';
 import { ref, computed, onMounted, watch } from 'vue';
 
@@ -336,17 +345,44 @@ async function debugPeppers() {
 
 async function updateStage(id: string, newStage: Pepper['stage']) {
   try {
-    await pepperFirestore.updatePepper(id, { stage: newStage });
-    $q.notify({
-      color: 'positive',
-      message: 'Стадия роста обновлена',
-      icon: 'check_circle',
-    });
+    console.log('🔄 updateStage вызвана:', { id, newStage });
+    const pepper = peppers.value.find((p) => p.id === id);
+    if (!pepper) {
+      throw new Error('Перец не найден');
+    }
+
+    console.log('📋 Текущая стадия перца:', pepper.stage);
+
+    // Если стадия изменилась, обновляем стадию и историю
+    if (pepper.stage !== newStage) {
+      const today = new Date().toISOString().slice(0, 10);
+      const newStageHistory = pepper.stageHistory ? [...pepper.stageHistory] : [];
+      
+      // Добавляем новую запись в историю только если стадия действительно изменилась
+      newStageHistory.push({ date: today, stage: newStage });
+
+      console.log('💾 Сохраняем изменения:', { stage: newStage, stageHistory: newStageHistory });
+
+      await pepperFirestore.updatePepper(id, {
+        stage: newStage,
+        stageHistory: newStageHistory,
+      });
+
+      console.log('✅ Стадия успешно обновлена в Firestore');
+
+      $q.notify({
+        color: 'positive',
+        message: 'Стадия роста обновлена',
+        icon: 'check_circle',
+      });
+    } else {
+      console.log('ℹ️ Стадия не изменилась, обновление не требуется');
+    }
   } catch (error) {
-    console.error('Error updating stage:', error);
+    console.error('❌ Ошибка обновления стадии:', error);
     $q.notify({
       color: 'negative',
-      message: 'Ошибка обновления стадии',
+      message: 'Ошибка обновления стадии: ' + (error as Error).message,
       icon: 'error',
     });
   }
@@ -391,14 +427,24 @@ async function handleToggleFavorite(id: string) {
   }
 }
 
+const editingPepper = ref<Pepper | null>(null);
+const showEditNameDialog = ref(false);
+
 function handleEdit(pepper: Pepper) {
-  // Пока просто переходим на страницу редактирования
-  // В будущем можно создать отдельную страницу редактирования
-  $q.notify({
-    color: 'info',
-    message: `Редактирование "${pepper.name}" - функция в разработке`,
-    icon: 'info',
-  });
+  editingPepper.value = pepper;
+  showEditNameDialog.value = true;
+}
+
+async function saveEditName(newName: string) {
+  if (!editingPepper.value) return;
+
+  try {
+    await handleUpdate(editingPepper.value.id, { name: newName });
+    editingPepper.value = null;
+    showEditNameDialog.value = false;
+  } catch (error) {
+    console.error('Error saving name:', error);
+  }
 }
 
 async function handleUpdate(pepperId: string, updates: Partial<Pepper>) {

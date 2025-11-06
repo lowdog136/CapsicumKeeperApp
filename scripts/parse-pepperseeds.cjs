@@ -8,7 +8,33 @@ const path = require('path');
 
 const BASE_URL = 'https://pepperseeds.ru/perec';
 const OUTPUT_FILE = path.join(__dirname, 'all-peppers.json');
-const PAGE_COUNT = 97; // Можно сделать динамически, но для стабильности фиксируем
+
+// Определяем количество страниц динамически
+async function detectTotalPages() {
+  try {
+    const html = await fetchPage(1);
+    const $ = cheerio.load(html);
+
+    // 1) Пробуем извлечь из текста вида: "всего 108 страниц"
+    const pageText = $('body').text();
+    const m = pageText.match(/всего\s+(\d+)\s+страниц/i);
+    if (m && m[1]) {
+      return parseInt(m[1], 10);
+    }
+
+    // 2) Либо берем последнее число из пагинации
+    let lastNum = 1;
+    $('.pagination a, .pagination span').each((_, el) => {
+      const t = $(el).text().trim();
+      const n = parseInt(t, 10);
+      if (!isNaN(n) && n > lastNum) lastNum = n;
+    });
+    return lastNum || 1;
+  } catch (e) {
+    console.warn('Не удалось определить количество страниц, используем 1:', e.message);
+    return 1;
+  }
+}
 
 async function fetchPage(page) {
   const url = page === 1 ? BASE_URL : `${BASE_URL}?page=${page}`;
@@ -88,14 +114,11 @@ function parsePeppersFromHtml(html) {
 
 async function main() {
   const allPeppers = [];
-  for (let page = 1; page <= PAGE_COUNT; page++) {
+  const totalPages = await detectTotalPages();
+  for (let page = 1; page <= totalPages; page++) {
     console.log(`Парсим страницу ${page} из ${PAGE_COUNT}...`);
     try {
       const html = await fetchPage(page);
-      if (page === 1) {
-        console.log('Первые 1000 символов HTML первой страницы:');
-        console.log(html.slice(0, 1000));
-      }
       const peppers = parsePeppersFromHtml(html);
       if (page === 1 && peppers.length === 0) {
         console.warn(

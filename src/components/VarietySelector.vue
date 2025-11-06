@@ -15,7 +15,7 @@
     <VarietySelectionDialog
       v-model="showVarietyDialog"
       :varieties="filteredVarieties"
-      :loading="loading"
+      :loading="loading || loadingAllItems"
       :use-v2="useV2"
       :heat-level-options="heatLevelOptions"
       :species-options="speciesOptions"
@@ -55,6 +55,19 @@ const storeV2 = useVarietyLibraryV2Store();
 
 const showVarietyDialog = ref(false);
 const showVarietyInfo = ref(false);
+const loadingAllItems = ref(false);
+
+// Загружаем allItems при открытии диалога, если нужно
+watch(showVarietyDialog, async (isOpen) => {
+  if (isOpen && useV2.value && storeV2.allItems.length === 0) {
+    loadingAllItems.value = true;
+    try {
+      await storeV2.fetchAllItems();
+    } finally {
+      loadingAllItems.value = false;
+    }
+  }
+});
 
 // Computed свойства
 const selectedVariety = computed({
@@ -111,11 +124,10 @@ function selectVariety(variety: PepperVariety) {
 // Инициализация
 onMounted(async () => {
   if (useV2.value) {
+    // Загружаем только первую страницу при монтировании
+    // allItems будет загружен при необходимости (при открытии диалога выбора)
     if (storeV2.items.length === 0) {
       await storeV2.fetchFirstPage();
-    }
-    if (storeV2.allItems.length === 0) {
-      await storeV2.fetchAllItems();
     }
   } else {
     if (storeV1.varieties.length === 0) {
@@ -129,9 +141,7 @@ watch(useV2, async (val) => {
     if (storeV2.items.length === 0) {
       await storeV2.fetchFirstPage();
     }
-    if (storeV2.allItems.length === 0) {
-      await storeV2.fetchAllItems();
-    }
+    // allItems будет загружен при необходимости
   }
 });
 </script>

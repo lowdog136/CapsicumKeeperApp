@@ -3,10 +3,9 @@
     <div class="col">
       <q-input
         v-model="selectedVarietyName"
-        label="Сорт перца*"
+        label="Сорт перца"
         :error="!!errors?.variety"
         :error-message="errors?.variety"
-        required
         readonly
         class="q-mb-sm"
         placeholder="Выберите сорт из библиотеки"

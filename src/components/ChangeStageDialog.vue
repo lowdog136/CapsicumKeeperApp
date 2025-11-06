@@ -8,15 +8,15 @@
         <q-select v-model="newStage" :options="stages" label="Новая стадия" outlined />
       </q-card-section>
       <q-card-actions align="right">
-        <q-btn flat label="Отмена" color="primary" v-close-popup />
-        <q-btn flat label="Сохранить" color="primary" @click="saveStage" v-close-popup />
+        <q-btn flat label="Отмена" color="primary" @click="cancel" />
+        <q-btn flat label="Сохранить" color="primary" @click="saveStage" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { Pepper } from './models';
 
 interface Props {
@@ -39,6 +39,14 @@ const showDialog = computed({
 
 const newStage = ref<Pepper['stage']>(props.currentStage);
 
+// Синхронизируем newStage при изменении currentStage
+watch(
+  () => props.currentStage,
+  (val) => {
+    newStage.value = val;
+  },
+);
+
 // Константы
 const stages: Pepper['stage'][] = [
   'проращивание',
@@ -51,6 +59,16 @@ const stages: Pepper['stage'][] = [
 function saveStage() {
   if (newStage.value !== props.currentStage) {
     emit('save', newStage.value);
+    showDialog.value = false;
+  } else {
+    // Если стадия не изменилась, просто закрываем диалог
+    showDialog.value = false;
   }
+}
+
+function cancel() {
+  // Сбрасываем значение при отмене
+  newStage.value = props.currentStage;
+  showDialog.value = false;
 }
 </script>

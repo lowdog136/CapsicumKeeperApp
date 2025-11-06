@@ -241,9 +241,13 @@ function changeStage() {
   showStageDialog.value = true;
 }
 
-function saveStage() {
-  if (newStage.value !== props.pepper.stage) {
-    emit('update:stage', newStage.value);
+function saveStage(stage: Pepper['stage']) {
+  if (stage !== props.pepper.stage) {
+    emit('update:stage', stage);
+    showStageDialog.value = false;
+  } else {
+    // Если стадия не изменилась, просто закрываем диалог
+    showStageDialog.value = false;
   }
 }
 

@@ -7,6 +7,8 @@ import {
   orderBy,
   limit,
   startAfter,
+  where,
+  addDoc,
   QueryDocumentSnapshot,
   DocumentData,
 } from 'firebase/firestore';
@@ -40,10 +42,135 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
   const totalCount = ref(0); // Можно обновлять при импорте или отдельным запросом
   const allItems = ref<PepperVarietyV2[]>([]);
   const lastManualUpdate = ref<string>('');
+  const importProgress = ref({
+    current: 0,
+    total: 0,
+    added: 0,
+    skipped: 0,
+    currentVariety: '',
+  });
 
   function setLastManualUpdate(dateStr?: string) {
     lastManualUpdate.value = dateStr || new Date().toISOString();
   }
+
+  // Импорт сортов с проверкой дубликатов и индикацией прогресса
+  const importVarieties = async (
+    varietiesToImport: Omit<PepperVarietyV2, 'id'>[],
+    onProgress?: (progress: typeof importProgress.value) => void,
+  ) => {
+    loading.value = true;
+    error.value = null;
+
+    // Сбрасываем прогресс
+    importProgress.value = {
+      current: 0,
+      total: varietiesToImport.length,
+      added: 0,
+      skipped: 0,
+      currentVariety: '',
+    };
+
+    try {
+      // Загружаем все существующие сорта для проверки дубликатов
+      console.log('Загружаем существующие сорта для проверки дубликатов...');
+      const existingSnapshot = await getDocs(query(collection(db, 'varieties_v2'), orderBy('name')));
+      const existingVarieties = existingSnapshot.docs.map((doc) => {
+        const data = doc.data() as PepperVarietyV2;
+        return {
+          id: doc.id,
+          name: data.name?.toLowerCase().trim() || '',
+        };
+      });
+
+      // Создаем Set для быстрой проверки дубликатов
+      const existingNamesSet = new Set(existingVarieties.map((v) => v.name));
+
+      console.log(`Найдено ${existingVarieties.length} существующих сортов`);
+      console.log(`Импортируем ${varietiesToImport.length} новых сортов...`);
+
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      // Импортируем сорта с прогрессом
+      for (let i = 0; i < varietiesToImport.length; i++) {
+        const variety = varietiesToImport[i];
+        const varietyName = variety.name?.toLowerCase().trim() || '';
+
+        // Обновляем прогресс
+        importProgress.value.current = i + 1;
+        importProgress.value.currentVariety = variety.name || '';
+
+        // Проверяем дубликат
+        if (existingNamesSet.has(varietyName)) {
+          skippedCount++;
+          importProgress.value.skipped = skippedCount;
+          console.log(`[${i + 1}/${varietiesToImport.length}] Пропущен дубликат: "${variety.name}"`);
+        } else {
+          try {
+            // Добавляем новый сорт
+            await addDoc(collection(db, 'varieties_v2'), {
+              ...variety,
+              // Убираем id если он есть (будет создан автоматически)
+              name: variety.name.trim(),
+            });
+
+            // Добавляем в Set существующих, чтобы не дублировать в рамках одного импорта
+            existingNamesSet.add(varietyName);
+            addedCount++;
+            importProgress.value.added = addedCount;
+
+            console.log(`[${i + 1}/${varietiesToImport.length}] Добавлен: "${variety.name}"`);
+          } catch (e: any) {
+            console.error(`Ошибка при добавлении "${variety.name}":`, e);
+            skippedCount++;
+            importProgress.value.skipped = skippedCount;
+          }
+        }
+
+        // Вызываем callback прогресса (каждые 10 элементов или на последнем)
+        if (onProgress && (i % 10 === 0 || i === varietiesToImport.length - 1)) {
+          onProgress({ ...importProgress.value });
+        }
+
+        // Небольшая задержка для избежания rate limiting
+        if (i % 50 === 0 && i > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      // Очищаем кэш после импорта
+      globalCache.clear();
+
+      // Обновляем дату последнего обновления
+      setLastManualUpdate();
+
+      const result = {
+        total: varietiesToImport.length,
+        added: addedCount,
+        skipped: skippedCount,
+      };
+
+      console.log('Импорт завершен:', result);
+      return result;
+    } catch (e: any) {
+      error.value = e.message || 'Ошибка импорта';
+      console.error('[importVarieties] error:', error.value);
+      throw e;
+    } finally {
+      loading.value = false;
+      // Сбрасываем прогресс через небольшую задержку
+      setTimeout(() => {
+        importProgress.value = {
+          current: 0,
+          total: 0,
+          added: 0,
+          skipped: 0,
+          currentVariety: '',
+        };
+      }, 2000);
+    }
+  };
 
   // Загрузка первой страницы с кэшированием
   const fetchFirstPage = async () => {
@@ -286,6 +413,74 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
     }
   };
 
+  // Поиск сортов через Firestore (более эффективно, чем клиентская фильтрация)
+  const searchVarieties = async (searchTerm: string, species?: string) => {
+    // Не показываем loading для поиска, чтобы не блокировать UI
+    // loading.value = true;
+    error.value = null;
+
+    try {
+      let q: any = collection(db, 'varieties_v2');
+
+      // Если есть поисковый запрос (минимум 2 символа), используем Firestore where
+      if (searchTerm && searchTerm.trim().length >= 2) {
+        const searchLower = searchTerm.trim().toLowerCase();
+        // Используем range query для поиска по началу строки
+        q = query(
+          q,
+          where('name', '>=', searchLower),
+          where('name', '<=', searchLower + '\uf8ff'),
+          orderBy('name'),
+          limit(50), // Уменьшаем лимит для лучшей производительности
+        );
+      } else if (species) {
+        // Если только фильтр по виду без поиска, используем where для вида
+        q = query(
+          q,
+          where('species', '==', species),
+          orderBy('name'),
+          limit(50),
+        );
+      } else {
+        // Если нет поиска и фильтра, возвращаем пустой массив
+        return [];
+      }
+
+      // Добавляем фильтр по виду, если указан вместе с поиском
+      if (species && searchTerm && searchTerm.trim().length >= 2) {
+        // Если есть и поиск, и фильтр по виду, используем клиентскую фильтрацию
+        // (требуется составной индекс в Firestore для оптимизации)
+        const snap = await getDocs(q);
+        let fetchedItems = snap.docs.map((doc) => {
+          const data = { id: doc.id, ...doc.data() } as PepperVarietyV2;
+          (data as any)._docRef = doc;
+          return data;
+        });
+
+        // Фильтруем по виду на клиенте
+        fetchedItems = fetchedItems.filter((v) => v.species === species);
+
+        return fetchedItems;
+      }
+
+      const snap = await getDocs(q);
+      const fetchedItems = snap.docs.map((doc) => {
+        const data = { id: doc.id, ...doc.data() } as PepperVarietyV2;
+        (data as any)._docRef = doc;
+        return data;
+      });
+
+      return fetchedItems;
+    } catch (e: any) {
+      error.value = e.message || 'Ошибка поиска';
+      console.error('[searchVarieties] error:', error.value);
+      return [];
+    } finally {
+      // Не сбрасываем loading, так как не устанавливали его
+      // loading.value = false;
+    }
+  };
+
   return {
     items,
     loading,
@@ -299,7 +494,10 @@ export const useVarietyLibraryV2Store = defineStore('variety-library-v2', () => 
     totalCount,
     allItems,
     fetchAllItems,
+    searchVarieties,
     lastManualUpdate,
     setLastManualUpdate,
+    importVarieties,
+    importProgress,
   };
 });

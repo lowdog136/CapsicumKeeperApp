@@ -11,6 +11,7 @@ import {
   where,
   orderBy,
   limit,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db } from 'src/boot/firebase';
 import type {
@@ -26,6 +27,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
   const lastCheckDate = ref<string | null>(null);
+  let unsubscribe: (() => void) | null = null;
 
   // Загрузка даты последней проверки из localStorage
   const loadLastCheckDate = () => {
@@ -159,19 +161,49 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     error.value = null;
 
     try {
+      // Отписываемся от предыдущего слушателя, если он есть
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
       const varietiesRef = collection(db, 'pepper-varieties');
       const q = query(varietiesRef, orderBy('name'));
-      const querySnapshot = await getDocs(q);
 
-      varieties.value = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as PepperVariety[];
+      // Подписываемся на изменения в реальном времени
+      unsubscribe = onSnapshot(
+        q,
+        (querySnapshot) => {
+          console.log('✅ Получены изменения сортов, документов:', querySnapshot.size);
+
+          varieties.value = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as PepperVariety[];
+
+          loading.value = false;
+        },
+        (err) => {
+          console.error('❌ Ошибка при получении изменений сортов:', err);
+          error.value = `Ошибка при получении изменений: ${err.message}`;
+          loading.value = false;
+        },
+      );
+
+      console.log('✅ Подписка на изменения сортов установлена');
     } catch (err) {
       error.value = 'Ошибка загрузки сортов: ' + (err as Error).message;
       console.error('Error loading varieties:', err);
-    } finally {
       loading.value = false;
+    }
+  };
+
+  // Отписка от изменений
+  const unsubscribeVarieties = () => {
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+      console.log('✅ Отписаны от изменений сортов');
     }
   };
 
@@ -187,14 +219,8 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
         updatedAt: now,
       };
 
-      const docRef = await addDoc(collection(db, 'pepper-varieties'), varietyData);
-      const newVariety: PepperVariety = {
-        id: docRef.id,
-        ...varietyData,
-      };
-
-      varieties.value.push(newVariety);
-      return newVariety;
+      await addDoc(collection(db, 'pepper-varieties'), varietyData);
+      // onSnapshot автоматически обновит список сортов
     } catch (err) {
       error.value = 'Ошибка добавления сорта: ' + (err as Error).message;
       console.error('Error adding variety:', err);
@@ -216,14 +242,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
       };
 
       await updateDoc(varietyRef, updateData);
-
-      const index = varieties.value.findIndex((v) => v.id === id);
-      if (index !== -1) {
-        varieties.value[index] = {
-          ...varieties.value[index],
-          ...updateData,
-        } as PepperVariety;
-      }
+      // onSnapshot автоматически обновит список сортов
     } catch (err) {
       error.value = 'Ошибка обновления сорта: ' + (err as Error).message;
       console.error('Error updating variety:', err);
@@ -239,7 +258,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
 
     try {
       await deleteDoc(doc(db, 'pepper-varieties', id));
-      varieties.value = varieties.value.filter((v) => v.id !== id);
+      // onSnapshot автоматически обновит список сортов
     } catch (err) {
       error.value = 'Ошибка удаления сорта: ' + (err as Error).message;
       console.error('Error deleting variety:', err);
@@ -509,8 +528,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
         }
       }
 
-      // Перезагружаем данные из Firebase
-      await loadVarieties();
+      // onSnapshot автоматически обновит список сортов
 
       console.log(`Удаление дубликатов завершено. Удалено ${duplicateCheck.count} дубликатов`);
       return duplicateCheck.count;
@@ -644,6 +662,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
 
     // Methods
     loadVarieties,
+    unsubscribeVarieties,
     addVariety,
     updateVariety,
     deleteVariety,

@@ -19,11 +19,10 @@
 
     <q-input
       v-model="descriptionValue"
-      label="Описание*"
+      label="Описание"
       type="textarea"
       :error="!!errors.description"
       :error-message="errors.description"
-      required
       class="q-mb-sm"
     />
 

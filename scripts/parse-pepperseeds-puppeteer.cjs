@@ -4,7 +4,27 @@
 const fs = require('fs');
 const path = require('path');
 const OUTPUT_FILE = path.join(__dirname, 'all-peppers.json');
-const PAGE_COUNT = 97;
+
+async function detectTotalPages(page) {
+  // Пробуем найти текст "всего N страниц" или последнюю цифру в пагинации
+  try {
+    const text = await page.evaluate(() => document.body.innerText);
+    const m = text.match(/всего\s+(\d+)\s+страниц/i);
+    if (m && m[1]) return parseInt(m[1], 10);
+
+    const lastNum = await page.evaluate(() => {
+      const nodes = Array.from(document.querySelectorAll('.pagination a, .pagination span'));
+      return nodes
+        .map((n) => parseInt(n.textContent.trim(), 10))
+        .filter((n) => !Number.isNaN(n))
+        .reduce((max, n) => (n > max ? n : max), 1);
+    });
+    return lastNum || 1;
+  } catch (e) {
+    console.warn('Не удалось определить количество страниц (puppeteer), используем 1:', e.message);
+    return 1;
+  }
+}
 
 async function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,9 +50,12 @@ async function main() {
 
   const allLinks = new Set();
   // Сначала собираем все ссылки на сорта
-  for (let p = 1; p <= PAGE_COUNT; p++) {
+  // Определяем количество страниц
+  await page.goto('https://pepperseeds.ru/perec', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const totalPages = await detectTotalPages(page);
+  for (let p = 1; p <= totalPages; p++) {
     const url = p === 1 ? 'https://pepperseeds.ru/perec' : `https://pepperseeds.ru/perec?page=${p}`;
-    console.log(`Собираем ссылки на сорта, страница ${p} из ${PAGE_COUNT}...`);
+    console.log(`Собираем ссылки на сорта, страница ${p} из ${totalPages}...`);
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await delay(1200 + Math.random() * 800);

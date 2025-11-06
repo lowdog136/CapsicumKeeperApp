@@ -45,6 +45,7 @@ function resetForm() {
     description: '',
     photoUrl: '',
   };
+  // Устанавливаем значение "неизвестный" по умолчанию
   selectedVariety.value = null;
 
   // Очищаем информацию о посадке
@@ -148,8 +149,6 @@ const errors = reactive({
 const isFormComplete = computed(() => {
   return (
     basicInfo.value.name &&
-    selectedVariety.value &&
-    basicInfo.value.description &&
     plantingInfo.value.stage &&
     plantingInfo.value.plantingDate &&
     plantingInfo.value.location.type
@@ -158,8 +157,9 @@ const isFormComplete = computed(() => {
 
 function validateForm() {
   errors.basicInfo.name = basicInfo.value.name ? '' : 'Укажите наименование';
-  errors.basicInfo.variety = selectedVariety.value ? '' : 'Выберите сорт из библиотеки';
-  errors.basicInfo.description = basicInfo.value.description ? '' : 'Укажите описание';
+  // Сорт и описание больше не обязательны
+  errors.basicInfo.variety = '';
+  errors.basicInfo.description = '';
   errors.plantingInfo.stage = plantingInfo.value.stage ? '' : 'Укажите стадию роста';
   errors.plantingInfo.plantingDate = plantingInfo.value.plantingDate ? '' : 'Укажите дату посадки';
   errors.plantingInfo.locationType = plantingInfo.value.location.type
@@ -177,9 +177,9 @@ function onSubmit() {
   // Создаем объект перца с данными из всех блоков
   const pepperData: Omit<Pepper, 'id' | 'userId'> = {
     name: basicInfo.value.name,
-    variety: selectedVariety.value?.name || '',
+    variety: selectedVariety.value?.name || 'неизвестный',
     photoUrl: basicInfo.value.photoUrl,
-    description: basicInfo.value.description,
+    description: basicInfo.value.description || '',
     stage: plantingInfo.value.stage,
     plantingDate: plantingInfo.value.plantingDate,
     fertilizingHistory: fertilizerHistory.value,

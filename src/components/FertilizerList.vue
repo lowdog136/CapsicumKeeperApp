@@ -51,7 +51,7 @@
                   :key="element"
                   size="sm"
                   :label="`${element}: ${value}%`"
-                  color="primary"
+                  class="fertilizer-composition-chip"
                   text-color="white"
                 />
               </div>
@@ -154,5 +154,11 @@ function handleToggleFavorite(id: string) {
 .fertilizer-list {
   max-height: 400px;
   overflow-y: auto;
+}
+
+/* Темно-зеленый цвет для тегов состава удобрений */
+.fertilizer-composition-chip {
+  background-color: #61892f !important;
+  color: #ffffff !important;
 }
 </style>

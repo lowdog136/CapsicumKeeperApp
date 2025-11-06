@@ -70,13 +70,12 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Отмена" color="primary" v-close-popup />
+          <q-btn flat label="Отмена" color="primary" @click="showQuickWatering = false" />
           <q-btn
             unelevated
             label="Полить"
             color="primary"
             @click="addQuickWatering"
-            v-close-popup
           />
         </q-card-actions>
       </q-card>
@@ -105,13 +104,12 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Отмена" color="primary" v-close-popup />
+          <q-btn flat label="Отмена" color="primary" @click="showQuickFertilizing = false" />
           <q-btn
             unelevated
             label="Удобрить"
             color="primary"
             @click="addQuickFertilizing"
-            v-close-popup
           />
         </q-card-actions>
       </q-card>
@@ -148,13 +146,12 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Отмена" color="primary" v-close-popup />
+          <q-btn flat label="Отмена" color="primary" @click="showQuickObservation = false" />
           <q-btn
             unelevated
             label="Добавить"
             color="primary"
             @click="addQuickObservation"
-            v-close-popup
           />
         </q-card-actions>
       </q-card>
@@ -170,8 +167,8 @@
           <q-select v-model="newStage" :options="stages" label="Новая стадия" outlined />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Отмена" color="primary" v-close-popup />
-          <q-btn unelevated label="Изменить" color="primary" @click="changeStage" v-close-popup />
+          <q-btn flat label="Отмена" color="primary" @click="showStageChange = false" />
+          <q-btn unelevated label="Изменить" color="primary" @click="changeStage" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -248,8 +245,9 @@ function addQuickWatering() {
     icon: 'water_drop',
   });
 
-  // Сброс формы
+  // Сброс формы и закрытие диалога
   quickWatering.value.volume = 200;
+  showQuickWatering.value = false;
 }
 
 function addQuickFertilizing() {
@@ -268,9 +266,10 @@ function addQuickFertilizing() {
     icon: 'eco',
   });
 
-  // Сброс формы
+  // Сброс формы и закрытие диалога
   quickFertilizing.value.note = '';
   quickFertilizing.value.grams = 10;
+  showQuickFertilizing.value = false;
 }
 
 function addQuickObservation() {
@@ -290,10 +289,11 @@ function addQuickObservation() {
     icon: 'visibility',
   });
 
-  // Сброс формы
+  // Сброс формы и закрытие диалога
   quickObservation.value.height = 0;
   quickObservation.value.leafCondition = '';
   quickObservation.value.notes = '';
+  showQuickObservation.value = false;
 }
 
 function changeStage() {
@@ -312,6 +312,12 @@ function changeStage() {
       message: `Стадия изменена на: ${newStage.value}`,
       icon: 'local_florist',
     });
+    
+    // Закрываем диалог
+    showStageChange.value = false;
+  } else {
+    // Если стадия не изменилась, просто закрываем диалог
+    showStageChange.value = false;
   }
 }
 </script>
