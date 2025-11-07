@@ -12,6 +12,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'favorites', component: () => import('pages/FavoritesPage.vue') },
       { path: 'varieties', component: () => import('pages/VarietyLibraryV2Page.vue') },
       { path: 'variety-library', component: () => import('pages/VarietyLibraryV2Page.vue') },
+      { path: 'fertilizer-library', component: () => import('pages/FertilizerLibraryPage.vue') },
       { path: 'roadmap', component: () => import('pages/RoadmapPage.vue') },
     ],
   },

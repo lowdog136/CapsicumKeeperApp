@@ -48,6 +48,10 @@
           <q-item-section avatar><q-icon name="local_florist" /></q-item-section>
           <q-item-section>Библиотека сортов</q-item-section>
         </q-item>
+        <q-item clickable :to="{ path: '/fertilizer-library' }">
+          <q-item-section avatar><q-icon name="science" /></q-item-section>
+          <q-item-section>Библиотека удобрений</q-item-section>
+        </q-item>
         <q-item clickable :to="{ path: '/roadmap' }">
           <q-item-section avatar><q-icon name="assignment" /></q-item-section>
           <q-item-section>Дорожная карта</q-item-section>

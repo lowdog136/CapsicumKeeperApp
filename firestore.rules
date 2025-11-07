@@ -44,6 +44,15 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Правила для библиотеки удобрений
+    match /fertilizers/{fertilizerId} {
+      // Все могут читать удобрения (публичная библиотека)
+      allow read: if true;
+      
+      // Только авторизованные пользователи могут создавать, обновлять и удалять
+      allow create, update, delete: if request.auth != null;
+    }
+    
     // Запрещаем доступ ко всем остальным коллекциям
     match /{document=**} {
       allow read, write: if false;
