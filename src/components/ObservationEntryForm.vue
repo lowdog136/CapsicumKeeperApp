@@ -22,7 +22,7 @@
     <div class="row q-col-gutter-sm q-mb-md">
       <div class="col-8">
         <q-input
-          v-model="form.problems"
+          :model-value="problemsText"
           label="Проблемы растений (необязательно)"
           outlined
           placeholder="Нажмите кнопку для выбора из библиотеки"
@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick, computed } from 'vue';
 import type { Observation } from './models';
 import type { PlantProblem } from 'stores/plant-problems-library';
 import PlantProblemsSelector from './PlantProblemsSelector.vue';
@@ -109,37 +109,103 @@ const leafConditions = [
   'Вредители',
 ];
 
+// Computed для отображения проблем в виде строки
+const problemsText = computed(() => {
+  return selectedProblems.value.map((p) => p.name).join(', ');
+});
+
+// Флаг для предотвращения циклических обновлений
+const isUpdating = ref(false);
+
 // Синхронизируем с v-model
 watch(
   () => props.modelValue,
   (newValue) => {
-    form.value = { ...newValue };
-    if (newValue.problems) {
-      selectedProblems.value = newValue.problems;
-      updateProblemsField();
+    if (!isUpdating.value && newValue) {
+      // Проверяем, отличаются ли значения перед обновлением
+      const currentStr = JSON.stringify({
+        date: form.value.date,
+        height: form.value.height,
+        leafCondition: form.value.leafCondition,
+        note: form.value.note,
+        problems: selectedProblems.value,
+      });
+      const newProblems = Array.isArray(newValue.problems) ? newValue.problems : [];
+      const newStr = JSON.stringify({
+        date: newValue.date,
+        height: newValue.height,
+        leafCondition: newValue.leafCondition,
+        note: newValue.note,
+        problems: newProblems,
+      });
+      
+      if (currentStr !== newStr) {
+        isUpdating.value = true;
+        form.value = {
+          date: newValue.date,
+          height: newValue.height,
+          leafCondition: newValue.leafCondition,
+          note: newValue.note,
+        };
+        if (Array.isArray(newValue.problems)) {
+          selectedProblems.value = newValue.problems;
+        } else {
+          selectedProblems.value = [];
+        }
+        nextTick(() => {
+          isUpdating.value = false;
+        });
+      }
     }
   },
   { immediate: true, deep: true },
 );
 
-// Эмитим изменения
+// Эмитим изменения при изменении form (кроме problems, которые управляются через selectedProblems)
 watch(
-  form,
-  (newValue) => {
-    const cleanValue = { ...newValue };
-    if (selectedProblems.value.length > 0) {
-      cleanValue.problems = selectedProblems.value;
+  () => [form.value.date, form.value.height, form.value.leafCondition, form.value.note],
+  () => {
+    if (!isUpdating.value) {
+      emitFormUpdate();
     }
-    emit('update:modelValue', cleanValue);
   },
   { deep: true },
 );
+
+// Эмитим изменения при изменении selectedProblems
+watch(
+  selectedProblems,
+  () => {
+    if (!isUpdating.value) {
+      emitFormUpdate();
+    }
+  },
+  { deep: true },
+);
+
+// Функция для эмита обновлений формы
+function emitFormUpdate() {
+  if (!isUpdating.value) {
+    isUpdating.value = true;
+    const cleanValue: Observation = {
+      date: form.value.date,
+      leafCondition: form.value.leafCondition,
+      height: form.value.height,
+      note: form.value.note,
+      problems: selectedProblems.value.length > 0 ? selectedProblems.value : undefined,
+    };
+    emit('update:modelValue', cleanValue);
+    // Сбрасываем флаг после следующего тика
+    nextTick(() => {
+      isUpdating.value = false;
+    });
+  }
+}
 
 function selectProblem(problem: PlantProblem) {
   // Проверяем, не выбрана ли уже эта проблема
   if (!selectedProblems.value.find((p) => p.id === problem.id)) {
     selectedProblems.value.push(problem);
-    updateProblemsField();
   }
   showProblemsSelector.value = false;
 }
@@ -148,12 +214,7 @@ function removeProblem(problemId: string) {
   const index = selectedProblems.value.findIndex((p) => p.id === problemId);
   if (index !== -1) {
     selectedProblems.value.splice(index, 1);
-    updateProblemsField();
   }
-}
-
-function updateProblemsField() {
-  form.value.problems = selectedProblems.value.map((p) => p.name).join(', ');
 }
 
 function getSeverityColor(severity: PlantProblem['severity']) {

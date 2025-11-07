@@ -81,7 +81,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { Fertilizer } from 'stores/fertilizer-library';
+import type { Fertilizer } from 'stores/fertilizer-library-firestore';
 
 interface Props {
   fertilizers: Fertilizer[];
@@ -116,14 +116,14 @@ const categoryOptions = categories.slice(1).map((c) => ({
 const filteredFertilizers = computed(() => {
   let result = props.fertilizers;
 
-  // Фильтр по категории
-  if (selectedCategory.value) {
-    result = result.filter((f) => f.category === selectedCategory.value);
+  // Поиск
+  if (searchQuery.value && searchQuery.value.trim().length > 0) {
+    result = props.onSearch(searchQuery.value);
   }
 
-  // Поиск
-  if (searchQuery.value) {
-    result = props.onSearch(searchQuery.value);
+  // Фильтр по категории (применяем после поиска)
+  if (selectedCategory.value) {
+    result = result.filter((f) => f.category === selectedCategory.value);
   }
 
   return result;

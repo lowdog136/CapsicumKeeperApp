@@ -11,7 +11,7 @@
         <!-- Список удобрений -->
         <FertilizerList
           :fertilizers="fertilizerLibrary.fertilizers"
-          :on-search="fertilizerLibrary.searchFertilizers"
+          :on-search="searchFertilizers"
           @select="selectFertilizer"
           @toggle-favorite="toggleFavorite"
         />
@@ -30,16 +30,21 @@
     </q-card>
 
     <!-- Диалог добавления нового удобрения -->
-    <AddFertilizerDialog v-model="showAddDialog" @add="addNewFertilizer" />
+    <FertilizerFormDialog
+      v-model="showAddDialog"
+      :fertilizer="editingFertilizer"
+      :loading="fertilizerLibrary.loading"
+      @save="addNewFertilizer"
+    />
   </q-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
-import { useFertilizerLibrary, type Fertilizer } from 'stores/fertilizer-library';
+import { useFertilizerLibraryFirestore, type Fertilizer } from 'stores/fertilizer-library-firestore';
 import FertilizerList from './FertilizerList.vue';
-import AddFertilizerDialog from './AddFertilizerDialog.vue';
+import FertilizerFormDialog from './FertilizerFormDialog.vue';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -51,7 +56,7 @@ const emit = defineEmits<{
 }>();
 
 const $q = useQuasar();
-const fertilizerLibrary = useFertilizerLibrary();
+const fertilizerLibrary = useFertilizerLibraryFirestore();
 
 // Состояние
 const showDialog = computed({
@@ -60,16 +65,25 @@ const showDialog = computed({
 });
 
 const showAddDialog = ref(false);
+const editingFertilizer = ref<Fertilizer | null>(null);
 
-// Инициализация библиотеки при первом открытии
+// Загрузка удобрений при первом открытии
 watch(
   () => props.modelValue,
-  (newValue) => {
+  async (newValue) => {
     if (newValue && fertilizerLibrary.fertilizers.length === 0) {
-      fertilizerLibrary.initializeFertilizers();
+      await fertilizerLibrary.fetchFertilizers();
     }
   },
 );
+
+onMounted(async () => {
+  if (fertilizerLibrary.fertilizers.length === 0) {
+    await fertilizerLibrary.fetchFertilizers();
+  }
+  // Подписываемся на изменения в реальном времени
+  fertilizerLibrary.subscribeFertilizers();
+});
 
 // Методы
 function selectFertilizer(fertilizer: Fertilizer) {
@@ -77,20 +91,74 @@ function selectFertilizer(fertilizer: Fertilizer) {
   showDialog.value = false;
 }
 
-function toggleFavorite(id: string) {
-  fertilizerLibrary.toggleFavorite(id);
+async function toggleFavorite(id: string) {
+  try {
+    await fertilizerLibrary.toggleFavorite(id);
+  } catch (error: any) {
+    $q.notify({
+      color: 'negative',
+      message: error.message || 'Ошибка при обновлении',
+      icon: 'error',
+    });
+  }
 }
 
-function addNewFertilizer(fertilizer: Fertilizer) {
-  const addedFertilizer = fertilizerLibrary.addFertilizer(fertilizer);
+async function addNewFertilizer(fertilizerData: Omit<Fertilizer, 'id' | 'createdAt' | 'updatedAt'>) {
+  try {
+    const id = await fertilizerLibrary.addFertilizer(fertilizerData);
+    
+    // Ждем обновления через подписку или перезагружаем список
+    await fertilizerLibrary.fetchFertilizers();
+    
+    const addedFertilizer = fertilizerLibrary.getFertilizerById(id);
+    
+    if (addedFertilizer) {
+      $q.notify({
+        color: 'positive',
+        message: 'Удобрение добавлено в библиотеку',
+        icon: 'check_circle',
+      });
+      emit('select', addedFertilizer);
+      showAddDialog.value = false;
+      editingFertilizer.value = null;
+    } else {
+      // Если не нашли сразу, создаем объект из данных
+      const newFertilizer: Fertilizer = {
+        id,
+        ...fertilizerData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      $q.notify({
+        color: 'positive',
+        message: 'Удобрение добавлено в библиотеку',
+        icon: 'check_circle',
+      });
+      emit('select', newFertilizer);
+      showAddDialog.value = false;
+      editingFertilizer.value = null;
+    }
+  } catch (error: any) {
+    $q.notify({
+      color: 'negative',
+      message: error.message || 'Ошибка при добавлении',
+      icon: 'error',
+    });
+  }
+}
 
-  $q.notify({
-    color: 'positive',
-    message: 'Удобрение добавлено в библиотеку',
-    icon: 'check_circle',
-  });
-
-  emit('select', addedFertilizer);
+// Функция поиска для FertilizerList
+function searchFertilizers(query: string): Fertilizer[] {
+  if (!query || query.trim().length === 0) {
+    return fertilizerLibrary.fertilizers;
+  }
+  const searchLower = query.toLowerCase();
+  return fertilizerLibrary.fertilizers.filter(
+    (f) =>
+      f.name.toLowerCase().includes(searchLower) ||
+      f.description?.toLowerCase().includes(searchLower) ||
+      f.manufacturer?.toLowerCase().includes(searchLower),
+  );
 }
 </script>
 
