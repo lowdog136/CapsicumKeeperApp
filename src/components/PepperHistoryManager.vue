@@ -1,13 +1,13 @@
 <template>
-  <q-dialog v-model="showDialog" persistent>
-    <q-card style="min-width: 900px; max-width: 95vw; max-height: 90vh">
-      <q-card-section class="row items-center q-pb-none">
+  <q-dialog v-model="showDialog" persistent :maximized="isMaximized">
+    <q-card :class="['history-card', { 'history-card--mobile': isMaximized }]">
+      <q-card-section class="row items-center q-pb-none history-header">
         <div class="text-h6">История ухода за "{{ localPepper.name }}"</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
 
-      <q-card-section class="q-pt-none" style="max-height: 70vh; overflow-y: auto">
+      <q-card-section class="q-pt-none history-scroll">
         <q-tabs
           v-model="activeTab"
           class="text-grey"
@@ -115,6 +115,8 @@ const showDialog = computed({
   set: (value: boolean) => emit('update:modelValue', value),
 });
 
+const isMaximized = computed(() => $q.screen.lt.md);
+
 const activeTab = ref<'watering' | 'fertilizing' | 'treatment' | 'observation'>(props.initialTab);
 
 // Синхронизируем activeTab с initialTab при открытии диалога
@@ -157,3 +159,42 @@ function updateObservationHistory(history: Observation[]) {
   emit('update', { observationLog: history });
 }
 </script>
+
+<style scoped>
+.history-card {
+  width: min(920px, 95vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 12px;
+}
+
+.history-header {
+  padding-bottom: 4px;
+}
+
+.history-scroll {
+  max-height: calc(90vh - 90px);
+  overflow-y: auto;
+}
+
+.history-card--mobile {
+  width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  padding-left: calc(env(safe-area-inset-left, 0px) + 8px);
+  padding-right: calc(env(safe-area-inset-right, 0px) + 8px);
+}
+
+.history-card--mobile .history-scroll {
+  max-height: calc(100vh - 160px);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 599px) {
+  .history-header {
+    padding: 12px 8px 4px;
+  }
+}
+</style>

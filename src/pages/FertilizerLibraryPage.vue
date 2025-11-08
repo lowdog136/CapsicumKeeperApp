@@ -1,8 +1,8 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="q-mb-lg">
-      <div class="row items-center justify-between">
-        <div>
+    <div class="q-mb-lg library-header">
+      <div class="row items-center justify-between library-header__row">
+        <div class="col">
           <h4 class="q-my-none">Библиотека удобрений</h4>
           <p class="text-grey-6 q-mt-sm">
             Управляйте библиотекой удобрений для ваших растений.
@@ -15,8 +15,8 @@
             </div>
           </div>
         </div>
-        <div>
-          <div class="row q-col-gutter-sm">
+        <div class="library-header__actions">
+          <div class="row q-col-gutter-sm actions-row">
             <q-btn
               v-if="isAdmin"
               color="secondary"
@@ -280,3 +280,50 @@ onMounted(async () => {
 });
 </script>
 
+<style scoped>
+.library-header {
+  padding-top: 12px;
+}
+
+.library-header__row {
+  gap: 12px;
+}
+
+.library-header__actions {
+  display: flex;
+  align-items: center;
+}
+
+.actions-row {
+  margin: 0;
+}
+
+.actions-row :deep(button) {
+  min-width: 180px;
+}
+
+@media (max-width: 599px) {
+  .library-header {
+    padding-top: 32px;
+  }
+
+  .library-header__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .library-header__actions {
+    width: 100%;
+  }
+
+  .actions-row {
+    width: 100%;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .actions-row :deep(button) {
+    width: 100%;
+  }
+}
+</style>

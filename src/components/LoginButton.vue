@@ -1,11 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, withDefaults } from 'vue';
 import { GoogleAuthProvider, signInWithPopup, auth, signInWithEmailAndPassword } from 'boot/auth';
 
 const dialog = ref(false);
 const email = ref('');
 const password = ref('');
 const error = ref('');
+
+const props = withDefaults(
+  defineProps<{
+    flat?: boolean;
+    dense?: boolean;
+    size?: string;
+    color?: string;
+  }>(),
+  {
+    flat: true,
+    dense: false,
+    size: 'md',
+    color: 'primary',
+  },
+);
 
 function openDialog() {
   dialog.value = true;
@@ -43,7 +58,15 @@ async function loginWithEmail() {
 </script>
 
 <template>
-  <q-btn flat icon="login" label="Войти" @click="openDialog" />
+  <q-btn
+    :flat="props.flat"
+    :dense="props.dense"
+    :size="props.size"
+    :color="props.color"
+    icon="login"
+    label="Войти"
+    @click="openDialog"
+  />
   <q-dialog v-model="dialog">
     <q-card style="min-width: 320px">
       <q-card-section class="text-h6">Вход</q-card-section>

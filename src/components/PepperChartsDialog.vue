@@ -1,13 +1,13 @@
 <template>
   <q-dialog v-model="showDialog" maximized>
-    <q-card>
-      <q-card-section class="row items-center q-pb-none">
+    <q-card class="charts-card">
+      <q-card-section class="row items-center q-pb-none charts-header">
         <div class="text-h6">Графики и статистика "{{ pepper.name }}"</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
 
-      <q-card-section class="q-pt-none" style="max-height: calc(100vh - 100px); overflow-y: auto">
+      <q-card-section class="q-pt-none charts-scroll">
         <!-- Общая статистика -->
         <div class="row q-col-gutter-md q-mb-lg">
           <div class="col-12 col-sm-6 col-md-3">
@@ -624,6 +624,25 @@ function formatMonth(dateString: string): string {
 </script>
 
 <style scoped>
+.charts-card {
+  width: min(920px, 96vw);
+  max-height: calc(100vh - 12px);
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(env(safe-area-inset-top, 0px));
+}
+
+.charts-header {
+  padding-top: 12px;
+  padding-bottom: 4px;
+}
+
+.charts-scroll {
+  max-height: calc(100vh - 170px);
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
 .chart-bar-container {
   min-height: 32px;
 }
@@ -643,6 +662,25 @@ function formatMonth(dateString: string): string {
   padding: 8px;
   border-radius: 4px;
   background-color: rgba(97, 137, 47, 0.03);
+}
+
+@media (max-width: 599px) {
+  .charts-card {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+    padding-left: calc(env(safe-area-inset-left, 0px) + 4px);
+    padding-right: calc(env(safe-area-inset-right, 0px) + 4px);
+  }
+
+  .charts-header {
+    padding: 20px 16px 8px;
+  }
+
+  .charts-scroll {
+    max-height: calc(100vh - 160px);
+    padding: 0 12px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
 }
 </style>
 
