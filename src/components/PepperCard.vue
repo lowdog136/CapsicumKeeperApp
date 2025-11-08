@@ -15,10 +15,12 @@
 
     <q-card-section class="card-content">
       <!-- Заголовок и основные действия -->
-      <div class="row items-center justify-between q-mb-sm">
-        <div class="text-h6">{{ pepper.name }}</div>
-        <div class="row items-center q-gutter-xs">
-          <q-badge class="pepper-id-badge" size="sm">{{ pepper.id }}</q-badge>
+      <div :class="['card-header', { 'card-header--mobile': isMobile }]">
+        <div class="card-title">
+          <div class="text-h6">{{ pepper.name }}</div>
+          <q-badge v-if="!isMobile" class="pepper-id-badge" size="sm">{{ pepper.id }}</q-badge>
+        </div>
+        <div v-if="!isMobile" class="row items-center q-gutter-xs">
           <q-btn flat round icon="edit" size="sm" @click="editPepper" />
           <q-btn
             flat
@@ -28,6 +30,56 @@
             color="negative"
             @click="showDeleteDialog = true"
           />
+        </div>
+        <div v-else class="row items-center justify-between q-gutter-sm full-width mobile-header-actions">
+          <q-chip dense size="sm" color="primary" text-color="white" icon="tag">
+            {{ pepper.id }}
+          </q-chip>
+          <q-btn flat round dense icon="more_vert">
+            <q-menu cover auto-close>
+              <q-list dense>
+                <q-item clickable v-close-popup @click="editPepper">
+                  <q-item-section avatar>
+                    <q-icon name="edit" />
+                  </q-item-section>
+                  <q-item-section>Редактировать</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="showDeleteDialog = true">
+                  <q-item-section avatar>
+                    <q-icon name="delete" color="negative" />
+                  </q-item-section>
+                  <q-item-section>Удалить</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item clickable v-close-popup @click="toggleFavorite">
+                  <q-item-section avatar>
+                    <q-icon :name="pepper.isFavorite ? 'star' : 'star_border'" color="amber" />
+                  </q-item-section>
+                  <q-item-section>
+                    {{ pepper.isFavorite ? 'Убрать из избранного' : 'В избранное' }}
+                  </q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="showHistory = true">
+                  <q-item-section avatar>
+                    <q-icon name="history" />
+                  </q-item-section>
+                  <q-item-section>История ухода</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="showCharts = true">
+                  <q-item-section avatar>
+                    <q-icon name="analytics" color="info" />
+                  </q-item-section>
+                  <q-item-section>Графики и статистика</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="showQuickActions = true">
+                  <q-item-section avatar>
+                    <q-icon name="flash_on" color="accent" />
+                  </q-item-section>
+                  <q-item-section>Быстрые действия</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
         </div>
       </div>
 
@@ -91,7 +143,7 @@
     <q-card-section class="card-footer q-pt-sm q-pb-sm">
       <!-- Статистика -->
       <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-4 text-center">
+        <div :class="['text-center', isMobile ? 'col-6' : 'col-4']">
           <div 
             class="stat-item cursor-pointer"
             @click="openHistoryTab('watering')"
@@ -100,7 +152,7 @@
             <div class="text-h6 text-weight-bold">{{ pepper.wateringHistory?.length || 0 }}</div>
           </div>
         </div>
-        <div class="col-4 text-center">
+        <div :class="['text-center', isMobile ? 'col-6' : 'col-4']">
           <div 
             class="stat-item cursor-pointer"
             @click="openHistoryTab('fertilizing')"
@@ -109,7 +161,7 @@
             <div class="text-h6 text-weight-bold">{{ pepper.fertilizingHistory?.length || 0 }}</div>
           </div>
         </div>
-        <div class="col-4 text-center">
+        <div :class="['text-center', isMobile ? 'col-6' : 'col-4']">
           <div 
             class="stat-item cursor-pointer"
             @click="openHistoryTab('observation')"
@@ -121,7 +173,7 @@
       </div>
 
       <!-- Иконки действий -->
-      <div class="row items-center justify-center q-gutter-sm">
+      <div class="row items-center justify-center q-gutter-sm" :class="{'mobile-actions-row': isMobile}">
         <q-btn 
           flat 
           round 
@@ -153,6 +205,7 @@
           <q-tooltip>Быстрые действия</q-tooltip>
         </q-btn>
         <q-btn
+          v-if="!isMobile"
           flat
           round
           :color="pepper.isFavorite ? 'amber' : 'grey'"
@@ -222,6 +275,7 @@ const emit = defineEmits<{
 const $q = useQuasar();
 
 // Состояние
+const historyInitialTab = ref<'watering' | 'fertilizing' | 'observation'>('watering');
 const showDeleteDialog = ref(false);
 const showStageDialog = ref(false);
 const showLocationDialog = ref(false);
@@ -230,16 +284,9 @@ const showQuickActions = ref(false);
 const showCharts = ref(false);
 const newStage = ref<Pepper['stage']>(props.pepper.stage);
 
-// Константы
-const stages: Pepper['stage'][] = [
-  'проращивание',
-  'рассада',
-  'вегетация',
-  'плодоношение',
-  'сбор урожая',
-];
-
 // Вычисляемые свойства
+const isMobile = computed(() => $q.screen.lt.sm);
+
 const daysSincePlanting = computed(() => {
   if (!props.pepper.plantingDate) return '-';
   const plantDate = new Date(props.pepper.plantingDate);
@@ -407,6 +454,32 @@ function openHistoryTab(tab: 'watering' | 'fertilizing' | 'observation') {
   flex-direction: column;
 }
 
+.full-width {
+  width: 100%;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-header--mobile {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-header-actions {
+  width: 100%;
+}
+
 .card-footer {
   margin-top: auto;
 }
@@ -464,6 +537,11 @@ function openHistoryTab(tab: 'watering' | 'fertilizing' | 'observation') {
 
   .my-card .text-caption {
     font-size: 0.75rem;
+  }
+
+  .mobile-actions-row {
+    flex-wrap: wrap;
+    justify-content: space-around;
   }
 }
 

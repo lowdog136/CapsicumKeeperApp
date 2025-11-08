@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page :class="['pepper-list-page', isMobile ? 'q-pa-sm' : 'q-pa-md']">
     <!-- Заголовок -->
     <div class="text-center q-mb-lg">
       <h4 class="q-my-none">Мои перцы</h4>
@@ -70,15 +70,16 @@
 
       <!-- Список перцев -->
       <div v-else>
-        <!-- Фильтры и поиск -->
-        <PepperFilters v-model="filters" v-model:view-mode="viewMode" />
+      <!-- Фильтры и поиск -->
+      <PepperFilters v-model="filters" v-model:view-mode="viewMode" />
 
-        <div class="row items-center justify-between q-mb-md">
+      <div class="header-wrapper q-mb-md">
           <h5 class="q-my-none">Ваши перцы ({{ filteredPeppers.length }})</h5>
           <q-btn
             color="primary"
             icon="add"
             label="Добавить перец"
+          class="header-action-btn"
             @click="$router.push('/add-pepper')"
           />
         </div>
@@ -162,12 +163,11 @@ const filters = ref({
 
 // Простое вычисление perPage без реактивности на window.innerWidth
 // Это предотвращает ненужные пересчеты computed свойств
+const isMobile = computed(() => $q.screen.lt.sm);
+
 const perPage = computed(() => {
-  // Меньше перцев на мобильных устройствах
-  // Используем прямую проверку, так как размер окна не меняется часто
-  const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
-  if (width < 600) return 4;
-  if (width < 1024) return 6;
+  if ($q.screen.lt.sm) return 4;
+  if ($q.screen.lt.md) return 6;
   return 8;
 });
 
@@ -530,6 +530,22 @@ async function handleUpdate(pepperId: string, updates: Partial<Pepper>) {
 </script>
 
 <style scoped>
+.pepper-list-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-action-btn {
+  flex-shrink: 0;
+}
+
 .pepper-card-wrapper {
   height: 100%;
   display: flex;
@@ -545,6 +561,16 @@ async function handleUpdate(pepperId: string, updates: Partial<Pepper>) {
 
 /* Улучшения для мобильных устройств */
 @media (max-width: 599px) {
+  .header-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .header-action-btn {
+    width: 100%;
+  }
+
   .pepper-card-wrapper :deep(.my-card) {
     margin-bottom: 1rem;
   }

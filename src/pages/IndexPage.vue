@@ -1,43 +1,42 @@
 <template>
-  <q-page class="q-pa-md">
-    <!-- Приветственный заголовок -->
-    <div class="text-center q-mb-xl">
-      <div class="row justify-center q-mb-md">
-        <q-icon name="local_florist" size="80px" color="primary" />
+  <q-page class="index-page q-pa-md">
+    <div class="index-wrapper">
+      <!-- Приветственный заголовок -->
+      <div class="index-hero text-center">
+        <div class="row justify-center q-mb-md">
+          <q-icon name="local_florist" :size="heroIconSize" color="primary" />
+          <div class="build-marker text-grey-5">Build: mobile v3.2.0-rc.4 (2025-11-08)</div>
+        </div>
+        <h2 class="q-my-none text-primary">CapsicumKeeper</h2>
+        <p class="text-h6 text-grey-7 q-mt-sm hero-subtitle">
+          Ваш персональный помощник для выращивания перцев
+        </p>
+        <p class="text-body1 text-grey-6 q-mt-md hero-description">
+          Отслеживайте рост, ведите дневник ухода и изучайте разнообразие сортов
+        </p>
       </div>
-      <h2 class="q-my-none text-primary">CapsicumKeeper</h2>
-      <p class="text-h6 text-grey-7 q-mt-sm">Ваш персональный помощник для выращивания перцев</p>
-      <p class="text-body1 text-grey-6 q-mt-md">
-        Отслеживайте рост, ведите дневник ухода и изучайте разнообразие сортов
-      </p>
-    </div>
 
-    <!-- Загрузка авторизации -->
-    <div v-if="userStore.loading" class="text-center q-pa-xl">
-      <q-spinner-dots color="primary" size="50px" />
-      <div class="q-mt-md">Проверка авторизации...</div>
-    </div>
+      <div class="index-main">
+        <!-- Загрузка авторизации -->
+        <div v-if="userStore.loading" class="text-center q-pa-xl">
+          <q-spinner-dots color="primary" size="50px" />
+          <div class="q-mt-md">Проверка авторизации...</div>
+        </div>
 
-    <!-- Не авторизован -->
-    <div v-else-if="!userStore.user" class="text-center q-pa-xl">
-      <q-icon name="account_circle" size="100px" color="grey-4" />
-      <div class="text-h6 q-mt-md text-grey-6">Добро пожаловать!</div>
-      <div class="text-body2 text-grey-5 q-mt-sm q-mb-lg">
-        Войдите в систему, чтобы начать отслеживать свои перцы
-      </div>
-      <div class="row justify-center q-gutter-md">
-        <q-btn color="primary" icon="login" label="Войти" @click="showLoginDialog = true" />
-        <q-btn
-          color="secondary"
-          icon="library_books"
-          label="Библиотека сортов"
-          @click="$router.push('/variety-library')"
-        />
-      </div>
-    </div>
+        <!-- Не авторизован -->
+        <div v-else-if="!userStore.user" class="guest-block">
+          <div class="guest-icon">
+            <q-icon name="account_circle" :size="guestIconSize" color="grey-4" />
+          </div>
+          <div class="guest-text text-grey-6">Добро пожаловать!</div>
+          <div class="guest-subtext text-grey-5">
+            Войдите в систему, чтобы начать отслеживать свои перцы
+          </div>
+          <div class="guest-actions"></div>
+        </div>
 
-    <!-- Авторизован -->
-    <div v-else>
+        <!-- Авторизован -->
+        <div v-else>
       <!-- Краткая статистика -->
       <div class="row q-col-gutter-md q-mb-xl">
         <div class="col-12 col-sm-6 col-md-3">
@@ -177,6 +176,8 @@
         </div>
       </div>
     </div>
+    </div>
+  </div>
 
     <!-- Диалог входа -->
     <q-dialog v-model="showLoginDialog">
@@ -214,6 +215,8 @@ const $q = useQuasar();
 const $router = useRouter();
 
 const showLoginDialog = ref(false);
+const heroIconSize = computed(() => ($q.screen.lt.sm ? '48px' : '80px'));
+const guestIconSize = computed(() => ($q.screen.lt.sm ? '72px' : '100px'));
 
 // Вычисляемые свойства для статистики
 const favoritePeppersCount = computed(() => peppers.value.filter((p) => p.isFavorite).length);
@@ -303,6 +306,119 @@ function login() {
   
   &:active {
     background-color: #4a6b22 !important;
+  }
+}
+
+.index-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0 16px 32px;
+}
+
+.index-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.index-hero {
+  padding: 28px 0 12px;
+}
+
+.index-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+}
+
+.guest-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 0 32px;
+}
+
+.guest-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.guest-subtext {
+  margin-top: 8px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.build-marker {
+  margin-top: 24px;
+  font-size: 0.75rem;
+  letter-spacing: 0.3px;
+}
+
+.guest-actions {
+  margin-top: auto;
+}
+
+@media (min-width: 600px) {
+  .index-page {
+    padding: 24px 32px 48px;
+  }
+
+  .guest-actions {
+    margin-top: 48px;
+  }
+}
+
+.index-hero h2 {
+  font-size: clamp(2rem, 7vw, 3rem);
+  line-height: 1.1;
+}
+
+.index-hero .hero-subtitle {
+  font-size: clamp(1.05rem, 4vw, 1.5rem);
+}
+
+.index-hero .hero-description {
+  font-size: clamp(0.95rem, 3.8vw, 1.1rem);
+}
+
+@media (max-width: 599px) {
+  .index-hero {
+    padding: 48px 0 12px;
+  }
+
+  .index-main {
+    padding-top: 24px;
+  }
+
+  .guest-block {
+    padding-top: 40px;
+  }
+
+  .index-hero .row {
+    margin-bottom: 12px;
+  }
+
+  .index-hero h2 {
+    font-size: 1.85rem;
+  }
+
+  .index-hero .hero-subtitle {
+    font-size: 1.05rem;
+  }
+
+  .index-hero .hero-description {
+    font-size: 0.95rem;
+  }
+
+  .guest-action-btn {
+    min-height: 54px;
+    font-size: 1rem;
   }
 }
 </style>

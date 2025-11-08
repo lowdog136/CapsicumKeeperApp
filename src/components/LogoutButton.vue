@@ -1,6 +1,22 @@
 <script setup lang="ts">
+import { withDefaults } from 'vue';
 import { useUserStore } from 'stores/user-store';
 import { useQuasar } from 'quasar';
+
+const props = withDefaults(
+  defineProps<{
+    flat?: boolean;
+    dense?: boolean;
+    size?: string;
+    color?: string;
+  }>(),
+  {
+    flat: true,
+    dense: false,
+    size: 'md',
+    color: 'primary',
+  },
+);
 
 const userStore = useUserStore();
 const $q = useQuasar();
@@ -30,5 +46,13 @@ defineExpose({ onLogout });
 </script>
 
 <template>
-  <q-btn flat icon="logout" label="Выйти" @click="onLogout" />
+  <q-btn
+    :flat="props.flat"
+    :dense="props.dense"
+    :size="props.size"
+    :color="props.color"
+    icon="logout"
+    label="Выйти"
+    @click="onLogout"
+  />
 </template>
