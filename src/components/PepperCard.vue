@@ -51,6 +51,40 @@
                   <q-item-section>Удалить</q-item-section>
                 </q-item>
                 <q-separator />
+                <q-item
+                  v-if="pepper.seedlingSlot"
+                  clickable
+                  v-close-popup
+                  @click="openSeedlingTray"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="grid_view" color="primary" />
+                  </q-item-section>
+                  <q-item-section>Кассета «{{ pepper.seedlingSlot.trayName || 'Без названия' }}»</q-item-section>
+                </q-item>
+                <q-item
+                  v-else
+                  clickable
+                  v-close-popup
+                  @click="assignToSeedlingTray"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="grid_view" color="primary" />
+                  </q-item-section>
+                  <q-item-section>Поместить в кассету</q-item-section>
+                </q-item>
+                <q-item
+                  v-if="pepper.seedlingSlot"
+                  clickable
+                  v-close-popup
+                  @click="removeFromSeedlingTray"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="close" color="negative" />
+                  </q-item-section>
+                  <q-item-section>Убрать из кассеты</q-item-section>
+                </q-item>
+                <q-separator />
                 <q-item clickable v-close-popup @click="toggleFavorite">
                   <q-item-section avatar>
                     <q-icon :name="pepper.isFavorite ? 'star' : 'star_border'" color="amber" />
@@ -118,6 +152,24 @@
             :label="locationText"
           />
           <q-btn flat round icon="edit" size="xs" @click="changeLocation" />
+        </div>
+      </div>
+
+      <div class="q-mb-md">
+        <div class="text-caption text-grey-6 q-mb-xs">Кассета для рассады</div>
+        <div v-if="pepper.seedlingSlot" class="row items-center q-gutter-xs">
+          <q-chip color="primary" text-color="white" size="sm" icon="grid_view">
+            {{ pepper.seedlingSlot.trayName || 'Кассета' }}
+            · R{{ pepper.seedlingSlot.row }} · C{{ pepper.seedlingSlot.column }}
+          </q-chip>
+          <q-btn flat round icon="open_in_new" size="xs" @click="openSeedlingTray" />
+          <q-btn flat round icon="close" size="xs" color="negative" @click="removeFromSeedlingTray" />
+        </div>
+        <div v-else class="row items-center q-gutter-xs">
+          <q-chip color="grey-5" text-color="white" size="sm" icon="grid_view">
+            Не назначена
+          </q-chip>
+          <q-btn outline dense size="sm" icon="add" label="Поместить" @click="assignToSeedlingTray" />
         </div>
       </div>
 
@@ -215,6 +267,19 @@
         >
           <q-tooltip>{{ pepper.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное' }}</q-tooltip>
         </q-btn>
+        <q-btn
+          v-if="!isMobile"
+          flat
+          round
+          color="primary"
+          icon="grid_view"
+          size="sm"
+          @click="pepper.seedlingSlot ? openSeedlingTray() : assignToSeedlingTray()"
+        >
+          <q-tooltip>
+            {{ pepper.seedlingSlot ? 'Открыть кассету' : 'Поместить в кассету' }}
+          </q-tooltip>
+        </q-btn>
       </div>
     </q-card-section>
 
@@ -270,6 +335,9 @@ const emit = defineEmits<{
   (e: 'toggle-favorite', id: string): void;
   (e: 'edit', pepper: Pepper): void;
   (e: 'update', updates: Partial<Pepper>): void;
+  (e: 'assign-to-seedling-tray', pepperId: string): void;
+  (e: 'remove-from-seedling-tray', pepperId: string): void;
+  (e: 'open-seedling-tray', payload: { trayId: string; pepperId: string }): void;
 }>();
 
 const $q = useQuasar();
@@ -391,6 +459,25 @@ function confirmDelete() {
 
 function toggleFavorite() {
   emit('toggle-favorite', props.pepper.id);
+}
+
+function assignToSeedlingTray() {
+  emit('assign-to-seedling-tray', props.pepper.id);
+}
+
+function removeFromSeedlingTray() {
+  emit('remove-from-seedling-tray', props.pepper.id);
+}
+
+function openSeedlingTray() {
+  if (props.pepper.seedlingSlot?.trayId) {
+    emit('open-seedling-tray', {
+      trayId: props.pepper.seedlingSlot.trayId,
+      pepperId: props.pepper.id,
+    });
+  } else {
+    assignToSeedlingTray();
+  }
 }
 
 function changeStage() {

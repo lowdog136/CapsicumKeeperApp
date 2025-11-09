@@ -99,6 +99,9 @@
                 @toggle-favorite="handleToggleFavorite"
                 @edit="handleEdit"
                 @update="(updates) => handleUpdate(pepper.id, updates)"
+                @assign-to-seedling-tray="handleAssignToSeedlingTray"
+                @remove-from-seedling-tray="handleRemoveFromSeedlingTray"
+                @open-seedling-tray="handleOpenSeedlingTray"
               />
             </div>
           </div>
@@ -139,9 +142,11 @@ import MigrationPanel from 'components/MigrationPanel.vue';
 import PepperFilters from 'components/PepperFilters.vue';
 import PepperEditForm from 'components/PepperEditForm.vue';
 import type { Pepper } from 'components/models';
+import { useSeedlingTrayStore } from 'stores/seedling-trays-firestore';
 import { ref, computed, onMounted, watch } from 'vue';
 
 const pepperFirestore = usePepperFirestore();
+const seedlingTrayStore = useSeedlingTrayStore();
 const userStore = useUserStore();
 const { peppers, loading, error } = storeToRefs(pepperFirestore);
 const $q = useQuasar();
@@ -342,6 +347,58 @@ async function debugPeppers() {
       icon: 'error',
     });
   }
+}
+
+function handleAssignToSeedlingTray(pepperId: string) {
+  $router.push({ path: '/seedling-trays', query: { assignPepper: pepperId } });
+}
+
+function handleOpenSeedlingTray(payload: { trayId: string; pepperId: string }) {
+  $router.push({
+    path: `/seedling-trays/${payload.trayId}`,
+    query: { highlight: payload.pepperId },
+  });
+}
+
+function handleRemoveFromSeedlingTray(pepperId: string) {
+  const pepper = peppers.value.find((p) => p.id === pepperId);
+  if (!pepper?.seedlingSlot) {
+    return;
+  }
+
+  const { trayId, row, column } = pepper.seedlingSlot;
+  const tray = seedlingTrayStore.getTrayById(trayId);
+  const trayLabel = tray?.name || 'Кассета';
+
+  $q.dialog({
+    title: 'Убрать из кассеты',
+    message: `Удалить перец «${pepper.name}» из кассеты «${trayLabel}» (R${row} · C${column})?`,
+    cancel: true,
+    persistent: true,
+    ok: {
+      color: 'negative',
+      label: 'Убрать',
+    },
+  }).onOk(async () => {
+    try {
+      if (!seedlingTrayStore.getTrayById(trayId)) {
+        await seedlingTrayStore.fetchTrays();
+      }
+      await seedlingTrayStore.clearSlot(trayId, row, column, pepperId);
+      $q.notify({
+        color: 'positive',
+        message: 'Перец убран из кассеты',
+        icon: 'check',
+      });
+    } catch (error: any) {
+      console.error('Error removing pepper from tray:', error);
+      $q.notify({
+        color: 'negative',
+        message: error.message || 'Не удалось убрать перец из кассеты',
+        icon: 'error',
+      });
+    }
+  });
 }
 
 async function updateStage(id: string, newStage: Pepper['stage']) {
