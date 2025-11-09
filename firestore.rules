@@ -21,18 +21,37 @@ service cloud.firestore {
     
     // Правила для перцев пользователей
     match /peppers/{pepperId} {
-      // Пользователи могут читать только свои перцы
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Пользователи могут читать только свои перцы или старые записи без userId
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        !resource.data.keys().hasAny(['userId']) ||
+        resource.data.userId == null
+      );
 
       // Пользователи могут создавать перцы только для себя
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
 
       // Обновлять/удалять можно, если:
-      // 1) существующий документ уже принадлежит пользователю, либо
-      // 2) в документе ещё нет userId (старые записи), но новое состояние назначает current user
+      // 1) документ уже принадлежит пользователю,
+      // 2) у документа нет userId (старые записи), и новое состояние закрепляет его за текущим пользователем,
+      // 3) userId в документе равен null (старый формат) и пользователь либо сохраняет null, либо назначает себя.
       allow update, delete: if request.auth != null && (
         resource.data.userId == request.auth.uid ||
-        (!resource.data.keys().hasAny(['userId']) && request.resource.data.userId == request.auth.uid)
+        (
+          !resource.data.keys().hasAny(['userId']) &&
+          (
+            request.resource == null ||
+            request.resource.data.userId == request.auth.uid
+          )
+        ) ||
+        (
+          resource.data.userId == null &&
+          (
+            request.resource == null ||
+            !request.resource.data.keys().hasAny(['userId']) ||
+            request.resource.data.userId == request.auth.uid
+          )
+        )
       );
     }
     
@@ -62,9 +81,21 @@ service cloud.firestore {
     
     // Правила для кассет рассады
     match /seedlingTrays/{trayId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.userId == null
+      );
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (
+          resource.data.userId == null &&
+          (
+            request.resource == null ||
+            request.resource.data.userId == request.auth.uid
+          )
+        )
+      );
     }
     
     // Запрещаем доступ ко всем остальным коллекциям

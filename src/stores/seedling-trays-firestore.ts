@@ -333,8 +333,15 @@ export const useSeedlingTrayStore = defineStore('seedling-trays-firestore', () =
       if (!pepperSnap.exists()) {
         throw new Error('Перец не найден');
       }
-      const pepperData = pepperSnap.data() as { userId?: string; seedlingSlot?: { trayId?: string; row?: number; column?: number } };
-      if (pepperData.userId !== currentUserId.value) {
+      const pepperData = pepperSnap.data() as {
+        userId?: string | null;
+        seedlingSlot?: { trayId?: string; row?: number; column?: number };
+      };
+
+      const isOwner = pepperData.userId === currentUserId.value;
+      const canClaimOwnership = pepperData.userId == null;
+
+      if (!isOwner && !canClaimOwnership) {
         throw new Error('Нет доступа к перцу');
       }
 
@@ -372,7 +379,7 @@ export const useSeedlingTrayStore = defineStore('seedling-trays-firestore', () =
         });
       }
 
-      transaction.update(pepperRef, {
+      const pepperUpdate: Record<string, any> = {
         seedlingSlot: {
           trayId: payload.trayId,
           trayName: trayData.name,
@@ -381,7 +388,13 @@ export const useSeedlingTrayStore = defineStore('seedling-trays-firestore', () =
           assignedAt: payload.assignedAt ?? now,
         },
         updatedAt: now,
-      });
+      };
+
+      if (canClaimOwnership) {
+        pepperUpdate.userId = currentUserId.value;
+      }
+
+      transaction.update(pepperRef, pepperUpdate);
     });
   };
 
@@ -406,27 +419,42 @@ export const useSeedlingTrayStore = defineStore('seedling-trays-firestore', () =
       const slot = slots.find((s) => s.row === row && s.column === column);
       const targetPepperId = pepperId ?? slot?.pepperId;
 
-      const updatedSlots = slots.filter(
-        (s) => !(s.row === row && s.column === column),
-      );
+      const updatedSlots = slots.filter((s) => !(s.row === row && s.column === column));
+
+      let pepperRef: ReturnType<typeof doc> | null = null;
+      let shouldClearPepperSlot = false;
+      let shouldAssignOwnership = false;
+
+      if (targetPepperId) {
+        pepperRef = doc(db, 'peppers', targetPepperId);
+        const pepperSnap = await transaction.get(pepperRef);
+        if (pepperSnap.exists()) {
+          const pepperData = pepperSnap.data() as { userId?: string | null };
+          if (pepperData.userId === currentUserId.value) {
+            shouldClearPepperSlot = true;
+          } else if (pepperData.userId == null) {
+            shouldClearPepperSlot = true;
+            shouldAssignOwnership = true;
+          }
+        }
+      }
 
       transaction.update(trayRef, {
         slots: updatedSlots,
         updatedAt: now,
       });
 
-      if (targetPepperId) {
-        const pepperRef = doc(db, 'peppers', targetPepperId);
-        const pepperSnap = await transaction.get(pepperRef);
-        if (pepperSnap.exists()) {
-          const pepperData = pepperSnap.data() as { userId?: string };
-          if (pepperData.userId === currentUserId.value) {
-            transaction.update(pepperRef, {
-              seedlingSlot: deleteField(),
-              updatedAt: now,
-            });
-          }
+      if (pepperRef && shouldClearPepperSlot) {
+        const pepperUpdate: Record<string, any> = {
+          seedlingSlot: deleteField(),
+          updatedAt: now,
+        };
+
+        if (shouldAssignOwnership) {
+          pepperUpdate.userId = currentUserId.value;
         }
+
+        transaction.update(pepperRef, pepperUpdate);
       }
     });
   };
