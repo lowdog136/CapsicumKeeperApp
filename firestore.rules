@@ -23,10 +23,17 @@ service cloud.firestore {
     match /peppers/{pepperId} {
       // Пользователи могут читать только свои перцы
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      
-      // Пользователи могут создавать, обновлять и удалять только свои перцы
+
+      // Пользователи могут создавать перцы только для себя
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Обновлять/удалять можно, если:
+      // 1) существующий документ уже принадлежит пользователю, либо
+      // 2) в документе ещё нет userId (старые записи), но новое состояние назначает current user
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (!resource.data.keys().hasAny(['userId']) && request.resource.data.userId == request.auth.uid)
+      );
     }
     
     // Правила для дорожной карты
@@ -51,6 +58,13 @@ service cloud.firestore {
       
       // Только авторизованные пользователи могут создавать, обновлять и удалять
       allow create, update, delete: if request.auth != null;
+    }
+    
+    // Правила для кассет рассады
+    match /seedlingTrays/{trayId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
     // Запрещаем доступ ко всем остальным коллекциям

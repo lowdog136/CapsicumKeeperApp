@@ -64,6 +64,10 @@
             <q-item-section avatar><q-icon name="list" /></q-item-section>
             <q-item-section>Мои перцы</q-item-section>
           </q-item>
+          <q-item clickable :to="{ path: '/seedling-trays' }">
+            <q-item-section avatar><q-icon name="grid_view" /></q-item-section>
+            <q-item-section>Кассеты для рассады</q-item-section>
+          </q-item>
           <q-item clickable :to="{ path: '/add-pepper' }">
             <q-item-section avatar><q-icon name="add" /></q-item-section>
             <q-item-section>Добавить перец</q-item-section>

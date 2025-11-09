@@ -48,6 +48,13 @@ export interface Pepper {
     hasSoilImprovement: boolean;
     soilImprovement: string | null;
   };
+  seedlingSlot?: {
+    trayId: string;
+    trayName?: string;
+    row: number;
+    column: number;
+    assignedAt: string;
+  };
   // Информация о выбранном сорте из библиотеки
   varietyInfo?: {
     id: string;
