@@ -78,6 +78,62 @@ service cloud.firestore {
       // Только авторизованные пользователи могут создавать, обновлять и удалять
       allow create, update, delete: if request.auth != null;
     }
+
+    // Растворы для массового полива
+    match /solutionRecipes/{recipeId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.userId == null
+      );
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (
+          resource.data.userId == null &&
+          (
+            request.resource == null ||
+            request.resource.data.userId == request.auth.uid
+          )
+        )
+      );
+    }
+
+    // Батчи растворов и история поливов
+    match /wateringBatches/{batchId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.userId == null
+      );
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (
+          resource.data.userId == null &&
+          (
+            request.resource == null ||
+            request.resource.data.userId == request.auth.uid
+          )
+        )
+      );
+
+      match /events/{eventId} {
+        allow read: if request.auth != null && (
+          resource.data.userId == request.auth.uid ||
+          resource.data.userId == null
+        );
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if request.auth != null && (
+          resource.data.userId == request.auth.uid ||
+          (
+            resource.data.userId == null &&
+            (
+              request.resource == null ||
+              request.resource.data.userId == request.auth.uid
+            )
+          )
+        );
+      }
+    }
     
     // Правила для кассет рассады
     match /seedlingTrays/{trayId} {
