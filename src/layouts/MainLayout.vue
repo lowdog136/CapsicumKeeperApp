@@ -64,6 +64,10 @@
             <q-item-section avatar><q-icon name="list" /></q-item-section>
             <q-item-section>Мои перцы</q-item-section>
           </q-item>
+          <q-item clickable :to="{ path: '/mass-watering' }">
+            <q-item-section avatar><q-icon name="water_drop" /></q-item-section>
+            <q-item-section>Массовый полив</q-item-section>
+          </q-item>
           <q-item clickable :to="{ path: '/seedling-trays' }">
             <q-item-section avatar><q-icon name="grid_view" /></q-item-section>
             <q-item-section>Кассеты для рассады</q-item-section>

@@ -55,6 +55,8 @@ export interface Pepper {
     column: number;
     assignedAt: string;
   };
+  soilNutrients?: SoilNutrientState;
+  wateringSchedule?: WateringScheduleSettings;
   // Информация о выбранном сорте из библиотеки
   varietyInfo?: {
     id: string;
@@ -111,6 +113,105 @@ export interface FertilizerComposition {
   Si?: number; // Кремний
 
   [key: string]: number | undefined;
+}
+
+export interface NutrientThresholds {
+  min?: FertilizerComposition;
+  max?: FertilizerComposition;
+}
+
+export interface SoilNutrientState {
+  current: FertilizerComposition;
+  thresholds?: NutrientThresholds | null;
+  lastUpdated: string;
+  lastWateredAt?: string | null;
+  lastFertilizedAt?: string | null;
+}
+
+export interface WateringScheduleSettings {
+  minIntervalHours?: number | null;
+  maxIntervalHours?: number | null;
+  notes?: string | null;
+}
+
+export interface WateringSolutionIngredient {
+  fertilizerId?: string | null;
+  displayName: string;
+  amount: number;
+  unit: 'g' | 'ml';
+  nutrients?: FertilizerComposition;
+  notes?: string | null;
+}
+
+export interface WateringSolutionRecipe {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string | null;
+  waterVolumeMl: number;
+  validForHours?: number | null;
+  ingredients: WateringSolutionIngredient[];
+  nutrientsPerLiter?: FertilizerComposition | null;
+  totalNutrients?: FertilizerComposition | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WateringBatchStatus = 'draft' | 'ready' | 'applied' | 'expired' | 'discarded';
+
+export interface WateringBatchTarget {
+  pepperId: string;
+  seedlingSlot?: {
+    trayId: string;
+    row: number;
+    column: number;
+  } | null;
+  plannedVolumeMl?: number | null;
+}
+
+export interface WateringBatch {
+  id: string;
+  userId: string;
+  recipeId?: string | null;
+  name: string;
+  description?: string | null;
+  status: WateringBatchStatus;
+  preparedAt: string;
+  expiresAt?: string | null;
+  totalVolumeMl: number;
+  remainingVolumeMl: number;
+  waterTemperatureC?: number | null;
+  nutrientsPerLiter?: FertilizerComposition | null;
+  totalNutrients?: FertilizerComposition | null;
+  targetPlants: WateringBatchTarget[];
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WateringEventTarget {
+  pepperId: string;
+  volumeMl: number;
+  seedlingSlot?: {
+    trayId: string;
+    row: number;
+    column: number;
+  } | null;
+  nutrientDelta?: FertilizerComposition | null;
+  consumption?: FertilizerComposition | null;
+}
+
+export interface WateringEvent {
+  id: string;
+  batchId: string;
+  userId: string;
+  appliedAt: string;
+  notes?: string | null;
+  totalVolumeMl: number;
+  targets: WateringEventTarget[];
+  nutrientTotals?: FertilizerComposition | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WateringEntry {

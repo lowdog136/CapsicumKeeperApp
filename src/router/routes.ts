@@ -13,6 +13,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'varieties', component: () => import('pages/VarietyLibraryV2Page.vue') },
       { path: 'variety-library', component: () => import('pages/VarietyLibraryV2Page.vue') },
       { path: 'fertilizer-library', component: () => import('pages/FertilizerLibraryPage.vue') },
+      { path: 'mass-watering', component: () => import('pages/MassWateringPage.vue') },
       { path: 'seedling-trays', component: () => import('pages/SeedlingTrayListPage.vue') },
       { path: 'seedling-trays/:id', component: () => import('pages/SeedlingTrayDetailsPage.vue') },
       { path: 'roadmap', component: () => import('pages/RoadmapPage.vue') },

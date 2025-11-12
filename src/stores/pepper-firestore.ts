@@ -7,10 +7,11 @@ import {
   addDoc,
   doc as firestoreDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   onSnapshot,
+  runTransaction,
+  doc,
 } from 'firebase/firestore';
 import type { Pepper } from 'src/components/models';
 import { useUserStore } from './user-store';
@@ -333,8 +334,84 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
   };
 
   const deletePepper = async (id: string) => {
+    if (!userStore.user) {
+      throw new Error('Требуется авторизация');
+    }
+
     try {
-      await deleteDoc(firestoreDoc(db, 'peppers', id));
+      const now = new Date().toISOString();
+
+      await runTransaction(db, async (transaction) => {
+        const pepperRef = firestoreDoc(db, 'peppers', id);
+        const pepperSnap = await transaction.get(pepperRef);
+
+        if (!pepperSnap.exists()) {
+          return;
+        }
+
+        const pepperData = pepperSnap.data() as {
+          userId?: string | null;
+          seedlingSlot?: { trayId?: string; row?: number; column?: number };
+        };
+
+        const isOwner = pepperData.userId === userStore.user?.uid;
+        const canClaimOwnership = pepperData.userId == null;
+
+        if (!isOwner && !canClaimOwnership) {
+          throw new Error('Нет доступа к удалению этого перца');
+        }
+
+        const slot = pepperData.seedlingSlot;
+        let trayRef: ReturnType<typeof doc> | null = null;
+        let updatedSlots: any[] | null = null;
+        let claimTrayOwnership = false;
+
+        if (slot?.trayId && slot.row && slot.column) {
+          trayRef = doc(db, 'seedlingTrays', String(slot.trayId));
+          const traySnap = await transaction.get(trayRef);
+          if (traySnap.exists()) {
+            const trayData = traySnap.data() as {
+              userId?: string | null;
+              slots?: any[];
+            };
+
+            if (
+              trayData.userId === userStore.user?.uid ||
+              trayData.userId == null
+            ) {
+              const slots = Array.isArray(trayData.slots) ? trayData.slots : [];
+              updatedSlots = slots.filter(
+                (s) =>
+                  !(
+                    s.pepperId === id ||
+                    (s.row === slot.row && s.column === slot.column)
+                  ),
+              );
+
+              if (trayData.userId == null) {
+                claimTrayOwnership = true;
+              }
+            } else {
+              throw new Error('Нет доступа к кассете для обновления');
+            }
+          }
+        }
+
+        transaction.delete(pepperRef);
+
+        if (trayRef && updatedSlots) {
+          const trayUpdate: Record<string, unknown> = {
+            slots: updatedSlots,
+            updatedAt: now,
+          };
+
+          if (claimTrayOwnership) {
+            trayUpdate.userId = userStore.user.uid;
+          }
+
+          transaction.update(trayRef, trayUpdate);
+        }
+      });
       // onSnapshot автоматически обновит список перцев
     } catch (error) {
       console.error('Error deleting pepper:', error);
