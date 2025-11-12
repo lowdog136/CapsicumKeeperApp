@@ -210,7 +210,7 @@
             @click="openHistoryTab('fertilizing')"
           >
             <div class="text-caption text-grey-6 q-mb-xs">Удобрений</div>
-            <div class="text-h6 text-weight-bold">{{ pepper.fertilizingHistory?.length || 0 }}</div>
+            <div class="text-h6 text-weight-bold">{{ totalFertilizings }}</div>
           </div>
         </div>
         <div :class="['text-center', isMobile ? 'col-6' : 'col-4']">
@@ -361,6 +361,14 @@ const daysSincePlanting = computed(() => {
   const now = new Date();
   const diff = Math.floor((now.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24));
   return diff >= 0 ? diff : '-';
+});
+
+const totalFertilizings = computed(() => {
+  const fromHistory = props.pepper.fertilizingHistory?.length || 0;
+  const fromAdditions = props.pepper.soilNutrients?.additions?.filter(
+    (addition) => addition.source === 'fertilizing' || addition.source === 'watering'
+  ).length || 0;
+  return fromHistory + fromAdditions;
 });
 
 const locationText = computed(() => {

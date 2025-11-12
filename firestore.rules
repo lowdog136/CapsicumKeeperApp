@@ -117,15 +117,18 @@ service cloud.firestore {
       );
 
       match /events/{eventId} {
+        // Разрешаем чтение, если:
+        // 1) событие принадлежит пользователю, или
+        // 2) родительский batch принадлежит пользователю (для событий без userId или со старыми данными)
         allow read: if request.auth != null && (
           resource.data.userId == request.auth.uid ||
-          resource.data.userId == null
+          get(/databases/$(database)/documents/wateringBatches/$(batchId)).data.userId == request.auth.uid
         );
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
         allow update, delete: if request.auth != null && (
           resource.data.userId == request.auth.uid ||
           (
-            resource.data.userId == null &&
+            (resource.data.userId == null || !resource.data.keys().hasAny(['userId'])) &&
             (
               request.resource == null ||
               request.resource.data.userId == request.auth.uid

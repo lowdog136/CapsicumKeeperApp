@@ -273,7 +273,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import type { QTableColumn } from 'quasar';
-import type { Pepper, WateringBatch, WateringBatchTarget, WateringSolutionRecipe } from 'components/models';
+import type { Pepper, WateringBatch, WateringBatchTarget, WateringSolutionRecipe, FertilizerComposition } from 'components/models';
 
 interface Props {
   modelValue: boolean;
@@ -297,6 +297,8 @@ const emit = defineEmits<{
       totalVolumeMl: number;
       remainingVolumeMl: number;
       waterTemperatureC?: number | null;
+      nutrientsPerLiter?: FertilizerComposition | null;
+      totalNutrients?: FertilizerComposition | null;
       targetPlants: WateringBatchTarget[];
     },
   ): void;
@@ -468,10 +470,16 @@ watch(
   },
 );
 
+const selectedRecipe = ref<WateringSolutionRecipe | null>(null);
+
 const handleRecipeChange = (recipeId: string | null) => {
-  if (!recipeId) return;
+  if (!recipeId) {
+    selectedRecipe.value = null;
+    return;
+  }
   const recipe = props.recipes.find((item) => item.id === recipeId);
   if (recipe) {
+    selectedRecipe.value = recipe;
     form.totalVolumeMl = recipe.waterVolumeMl;
     form.remainingVolumeMl = recipe.waterVolumeMl;
     if (recipe.validForHours) {
@@ -479,8 +487,23 @@ const handleRecipeChange = (recipeId: string | null) => {
       const expires = new Date(prepared.getTime() + recipe.validForHours * 60 * 60 * 1000);
       form.expiresAt = expires.toISOString().slice(0, 16);
     }
+  } else {
+    selectedRecipe.value = null;
   }
 };
+
+// При изменении рецепта через props.batch тоже обновляем selectedRecipe
+watch(
+  () => form.recipeId,
+  (recipeId) => {
+    if (recipeId) {
+      const recipe = props.recipes.find((item) => item.id === recipeId);
+      selectedRecipe.value = recipe ?? null;
+    } else {
+      selectedRecipe.value = null;
+    }
+  },
+);
 
 const togglePepperSelection = (pepperId: string) => {
   const list = selectedPepperIds.value;
@@ -551,6 +574,10 @@ async function handleSubmit() {
     return;
   }
 
+  // Копируем nutrientsPerLiter и totalNutrients из рецепта, если он выбран
+  const nutrientsPerLiter = selectedRecipe.value?.nutrientsPerLiter ?? null;
+  const totalNutrients = selectedRecipe.value?.totalNutrients ?? null;
+
   emit('save', {
     name: form.name,
     description: form.description || null,
@@ -560,6 +587,8 @@ async function handleSubmit() {
     totalVolumeMl: Number(form.totalVolumeMl),
     remainingVolumeMl: Number(form.remainingVolumeMl),
     waterTemperatureC: form.waterTemperatureC ?? null,
+    nutrientsPerLiter,
+    totalNutrients,
     targetPlants: targetEntries.map((item) => ({
       pepperId: item.pepperId,
       seedlingSlot: item.seedlingSlot ?? null,

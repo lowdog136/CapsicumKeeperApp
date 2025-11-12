@@ -120,12 +120,22 @@ export interface NutrientThresholds {
   max?: FertilizerComposition;
 }
 
+export interface NutrientAddition {
+  date: string; // ISO string
+  amount: FertilizerComposition; // сколько было добавлено (в граммах)
+  source: 'watering' | 'fertilizing' | 'manual'; // источник внесения
+  sourceId?: string | null; // ID события полива/удобрения (опционально)
+}
+
 export interface SoilNutrientState {
-  current: FertilizerComposition;
+  current: FertilizerComposition; // вычисляемое значение (кэш)
   thresholds?: NutrientThresholds | null;
-  lastUpdated: string;
+  lastUpdated: string; // когда последний раз обновлялось состояние
   lastWateredAt?: string | null;
   lastFertilizedAt?: string | null;
+  // История внесений элементов
+  additions?: NutrientAddition[] | null; // хронологический список внесений
+  lastCalculatedAt?: string | null; // когда последний раз пересчитывалось current
 }
 
 export interface WateringScheduleSettings {

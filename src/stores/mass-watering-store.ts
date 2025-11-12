@@ -21,6 +21,7 @@ import { useUserStore } from './user-store';
 import type {
   FertilizerComposition,
   SoilNutrientState,
+  NutrientAddition,
   WateringBatch,
   WateringBatchStatus,
   WateringBatchTarget,
@@ -30,6 +31,10 @@ import type {
   WateringSolutionIngredient,
   WateringSolutionRecipe,
 } from 'src/components/models';
+import {
+  calculateSoilNutrients,
+  getCurrentSoilNutrients,
+} from 'src/utils/nutrient-absorption';
 
 interface CreateSolutionRecipePayload {
   name: string;
@@ -141,13 +146,30 @@ const hasPositiveNutrients = (nutrients: FertilizerComposition | null | undefine
 };
 
 const normalizeSoilState = (state: SoilNutrientState | null | undefined, now: string) => {
-  const current = { ...(state?.current ?? {}) };
+  // Если есть существующее состояние, используем его, иначе создаем новое
+  const existingState = state ?? {
+    current: {},
+    lastUpdated: now,
+    additions: [],
+  };
+
+  // Если нет additions, инициализируем пустым массивом
+  const additions = existingState.additions ?? [];
+
+  // Пересчитываем current на основе истории (если есть история)
+  let current = existingState.current ?? {};
+  if (additions.length > 0) {
+    current = calculateSoilNutrients(existingState, now);
+  }
+
   return {
     current,
-    thresholds: state?.thresholds ?? null,
+    thresholds: existingState.thresholds ?? null,
     lastUpdated: now,
     lastWateredAt: now,
-    lastFertilizedAt: state?.lastFertilizedAt ?? null,
+    lastFertilizedAt: existingState.lastFertilizedAt ?? null,
+    additions,
+    lastCalculatedAt: now,
   } as SoilNutrientState;
 };
 
@@ -492,6 +514,7 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
     );
 
     await runTransaction(db, async (transaction) => {
+      // ВСЕ READS ПЕРВЫМИ
       const batchRef = doc(db, 'wateringBatches', payload.batchId);
       const batchSnap = await transaction.get(batchRef);
       if (!batchSnap.exists()) {
@@ -518,20 +541,30 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
       }
 
       const nutrientPerLiter = batchData.nutrientsPerLiter ?? null;
-      const eventTargets: WateringEventTarget[] = [];
-      let nutrientTotals: FertilizerComposition | null = null;
+
+      // Читаем все перцы (ВСЕ READS ПЕРВЫМИ)
+      const pepperSnaps: Array<{ snap: Awaited<ReturnType<typeof transaction.get>>; target: ApplyWateringTarget }> = [];
 
       for (const target of payload.targets) {
         const pepperRef = doc(db, 'peppers', target.pepperId);
         const pepperSnap = await transaction.get(pepperRef);
-        if (!pepperSnap.exists()) {
+        pepperSnaps.push({ snap: pepperSnap, target });
+      }
+
+      // ВСЕ WRITES ПОСЛЕ ВСЕХ READS
+      const eventTargets: WateringEventTarget[] = [];
+      let nutrientTotals: FertilizerComposition | null = null;
+
+      for (const { snap, target } of pepperSnaps) {
+        if (!snap.exists()) {
           console.warn('[massWatering] pepper not found', target.pepperId);
           continue;
         }
-        const pepperData = pepperSnap.data() as {
+        const pepperData = snap.data() as {
           userId?: string | null;
           soilNutrients?: SoilNutrientState;
           wateringSchedule?: WateringScheduleSettings;
+          wateringHistory?: Array<{ date: string; volume?: number }>;
         };
         if (
           pepperData.userId &&
@@ -547,17 +580,51 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
         const consumption = target.consumption ?? null;
         nutrientTotals = addNutrients(nutrientTotals, addition);
 
+        // Нормализуем состояние почвы
         const normalizedSoil = normalizeSoilState(pepperData.soilNutrients, now);
-        normalizedSoil.current = subtractNutrients(
-          addNutrients(normalizedSoil.current, addition),
-          consumption,
-        );
+
+        // Если есть элементы для добавления, добавляем запись в историю
+        // Даже если addition пустой, обновляем lastWateredAt
         if (hasPositiveNutrients(addition)) {
+          const newAddition: NutrientAddition = {
+            date: now,
+            amount: addition,
+            source: 'watering',
+            sourceId: null, // будет установлен после создания события
+          };
+
+          // Добавляем новое внесение в историю
+          normalizedSoil.additions = [...(normalizedSoil.additions ?? []), newAddition];
+
+          // Пересчитываем текущее состояние на основе всей истории
+          normalizedSoil.current = calculateSoilNutrients(normalizedSoil, now);
+          normalizedSoil.lastCalculatedAt = now;
           normalizedSoil.lastFertilizedAt = now;
+        } else {
+          // Если нет элементов, но был полив, обновляем только lastWateredAt
+          // и пересчитываем current на основе существующих additions
+          if (normalizedSoil.additions && normalizedSoil.additions.length > 0) {
+            normalizedSoil.current = calculateSoilNutrients(normalizedSoil, now);
+            normalizedSoil.lastCalculatedAt = now;
+          }
         }
+
+        // Если указано потребление (например, при ручном вычитании), вычитаем его из current
+        if (consumption && hasPositiveNutrients(consumption)) {
+          normalizedSoil.current = subtractNutrients(normalizedSoil.current, consumption);
+        }
+
+        // Обновляем историю поливов
+        const existingWateringHistory = pepperData.wateringHistory ?? [];
+        const wateringHistoryEntry = {
+          date: now,
+          volume: target.volumeMl,
+        };
+        const updatedWateringHistory = [...existingWateringHistory, wateringHistoryEntry];
 
         const pepperUpdate: Record<string, unknown> = {
           soilNutrients: normalizedSoil,
+          wateringHistory: updatedWateringHistory,
           updatedAt: now,
         };
 
@@ -565,6 +632,7 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
           pepperUpdate.userId = currentUserId.value;
         }
 
+        const pepperRef = doc(db, 'peppers', target.pepperId);
         transaction.update(pepperRef, pepperUpdate);
 
         eventTargets.push({
@@ -576,10 +644,27 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
         });
       }
 
+      // Обновляем список целевых растений - добавляем новые, если их нет
+      const existingTargetPlants = batchData.targetPlants ?? [];
+      const existingPepperIds = new Set(existingTargetPlants.map((t) => t.pepperId));
+      const newTargetPlants: WateringBatchTarget[] = [...existingTargetPlants];
+
+      // Добавляем новые перцы в список целевых растений
+      for (const target of payload.targets) {
+        if (!existingPepperIds.has(target.pepperId)) {
+          newTargetPlants.push({
+            pepperId: target.pepperId,
+            seedlingSlot: target.seedlingSlot ?? null,
+            plannedVolumeMl: target.volumeMl ?? null,
+          });
+        }
+      }
+
       const eventsCollection = collection(batchRef, 'events');
       const eventRef = doc(eventsCollection);
       const batchUpdate: Record<string, unknown> = {
         remainingVolumeMl: Math.max(remainingVolume - totalVolumeMl, 0),
+        targetPlants: newTargetPlants,
         updatedAt: now,
       };
 
