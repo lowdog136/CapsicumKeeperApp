@@ -120,12 +120,35 @@ export interface NutrientThresholds {
   max?: FertilizerComposition;
 }
 
+// Тип усвояемости удобрения (расширяемый)
+export type FertilizerAvailabilityType = 
+  | 'fast'      // Быстро усвояемое (жидкие, хелаты) - множитель ~1.5
+  | 'medium'    // Средняя усвояемость (гранулированное) - множитель 1.0
+  | 'slow'      // Медленно усвояемое (органическое, пролонгированное) - множитель ~0.6
+  | string;     // Позволяет добавлять кастомные типы в будущем
+
+export interface NutrientAddition {
+  date: string; // ISO string
+  amount: FertilizerComposition; // сколько было добавлено (в граммах)
+  source: 'watering' | 'fertilizing' | 'manual'; // источник внесения
+  sourceId?: string | null; // ID события полива/удобрения (опционально)
+  
+  // Информация об удобрении и его усвояемости
+  fertilizerId?: string | null;        // ID удобрения из библиотеки
+  fertilizerName?: string | null;      // Название удобрения
+  availabilityType?: FertilizerAvailabilityType | null; // Тип усвояемости
+  absorptionMultipliers?: Record<string, number> | null; // Множители для каждого элемента
+}
+
 export interface SoilNutrientState {
-  current: FertilizerComposition;
+  current: FertilizerComposition; // вычисляемое значение (кэш)
   thresholds?: NutrientThresholds | null;
-  lastUpdated: string;
+  lastUpdated: string; // когда последний раз обновлялось состояние
   lastWateredAt?: string | null;
   lastFertilizedAt?: string | null;
+  // История внесений элементов
+  additions?: NutrientAddition[] | null; // хронологический список внесений
+  lastCalculatedAt?: string | null; // когда последний раз пересчитывалось current
 }
 
 export interface WateringScheduleSettings {

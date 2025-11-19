@@ -113,13 +113,10 @@
                 </div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
 
-        <!-- Статистика по элементам -->
-        <q-card class="q-mb-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Статистика по элементам</div>
+            <!-- Статистика по элементам (внутри раздела удобрений) -->
+            <q-separator class="q-my-md" />
+            <div class="text-subtitle1 q-mb-md">Статистика по элементам</div>
             <div v-if="elementStats.totalGrams === 0" class="text-center q-pa-lg text-grey-6">
               Нет данных о составе удобрений
             </div>
@@ -148,6 +145,11 @@
                     <div class="col-2 text-right">
                       <div class="text-weight-medium">{{ elementStats.macro[element.symbol]?.toFixed(1) || 0 }}</div>
                       <div class="text-caption text-grey-6">г</div>
+                    </div>
+                  </div>
+                  <div v-if="getAbsorptionForecast(element.symbol, 'macro')" class="q-mt-xs">
+                    <div class="text-caption text-grey-6">
+                      {{ getAbsorptionForecast(element.symbol, 'macro') }}
                     </div>
                   </div>
                   <div v-if="isElementExcessive(element.symbol, 'macro')" class="q-mt-xs">
@@ -185,6 +187,11 @@
                     <div class="col-2 text-right">
                       <div class="text-weight-medium">{{ elementStats.micro[element.symbol]?.toFixed(2) || 0 }}</div>
                       <div class="text-caption text-grey-6">г</div>
+                    </div>
+                  </div>
+                  <div v-if="getAbsorptionForecast(element.symbol, 'micro')" class="q-mt-xs">
+                    <div class="text-caption text-grey-6">
+                      {{ getAbsorptionForecast(element.symbol, 'micro') }}
                     </div>
                   </div>
                   <div v-if="isElementExcessive(element.symbol, 'micro')" class="q-mt-xs">
@@ -283,6 +290,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { Pepper } from './models';
+import {
+  getCurrentSoilNutrients,
+  calculateSoilNutrients,
+} from 'src/utils/nutrient-absorption';
 
 interface Props {
   modelValue: boolean;
@@ -336,7 +347,13 @@ const showDialog = computed({
 
 // Общая статистика
 const totalWaterings = computed(() => props.pepper.wateringHistory?.length || 0);
-const totalFertilizings = computed(() => props.pepper.fertilizingHistory?.length || 0);
+const totalFertilizings = computed(() => {
+  const fromHistory = props.pepper.fertilizingHistory?.length || 0;
+  const fromAdditions = props.pepper.soilNutrients?.additions?.filter(
+    (addition) => addition.source === 'fertilizing' || addition.source === 'watering'
+  ).length || 0;
+  return fromHistory + fromAdditions;
+});
 const totalObservations = computed(() => props.pepper.observationLog?.length || 0);
 
 const daysSincePlanting = computed(() => {
@@ -365,17 +382,45 @@ const maxWateringVolume = computed(() => {
   return Math.max(...wateringChartData.value.map((item) => item.volume), 1);
 });
 
-// График удобрений
+// График удобрений (объединяем данные из fertilizingHistory и soilNutrients.additions)
 const fertilizingChartData = computed<FertilizingChartItem[]>(() => {
-  if (!props.pepper.fertilizingHistory || props.pepper.fertilizingHistory.length === 0) return [];
+  const items: FertilizingChartItem[] = [];
   
-  return props.pepper.fertilizingHistory
-    .map((entry) => ({
-      date: formatDate(entry.date),
-      grams: entry.grams || 0,
-    }))
+  // Добавляем данные из старой истории удобрений
+  if (props.pepper.fertilizingHistory && props.pepper.fertilizingHistory.length > 0) {
+    props.pepper.fertilizingHistory.forEach((entry) => {
+      items.push({
+        date: entry.date,
+        grams: entry.grams || 0,
+      });
+    });
+  }
+  
+  // Добавляем данные из массового полива (soilNutrients.additions)
+  if (props.pepper.soilNutrients?.additions && props.pepper.soilNutrients.additions.length > 0) {
+    props.pepper.soilNutrients.additions.forEach((addition) => {
+      // Вычисляем общее количество элементов в граммах
+      const totalGrams = Object.values(addition.amount).reduce((sum, value) => {
+        return sum + (value ?? 0);
+      }, 0);
+      
+      if (totalGrams > 0) {
+        items.push({
+          date: addition.date,
+          grams: Math.round(totalGrams * 100) / 100, // Округляем до 2 знаков
+        });
+      }
+    });
+  }
+  
+  // Сортируем по дате и берем последние 10
+  return items
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-10); // Последние 10 удобрений
+    .map((item) => ({
+      ...item,
+      date: formatDate(item.date),
+    }))
+    .slice(-10);
 });
 
 const maxFertilizingGrams = computed(() => {
@@ -435,10 +480,6 @@ const elementStats = computed<ElementStats>(() => {
   const micro: Record<string, number> = {};
   let totalGrams = 0;
 
-  if (!props.pepper.fertilizingHistory) {
-    return { macro, micro, totalGrams };
-  }
-
   // Инициализируем все элементы нулями
   macroElementsList.forEach((el) => {
     macro[el.symbol] = 0;
@@ -447,29 +488,61 @@ const elementStats = computed<ElementStats>(() => {
     micro[el.symbol] = 0;
   });
 
-  // Суммируем элементы из всех удобрений
-  props.pepper.fertilizingHistory.forEach((entry) => {
-    if (!entry.composition || !entry.grams) return;
+  // Используем текущее состояние почвы с учетом поглощения элементов
+  // Если есть soilNutrients, используем его, иначе суммируем из fertilizingHistory (для обратной совместимости)
+  if (props.pepper.soilNutrients) {
+    // Проверяем, есть ли additions или current с данными
+    const hasAdditions = props.pepper.soilNutrients.additions && props.pepper.soilNutrients.additions.length > 0;
+    const hasCurrent = props.pepper.soilNutrients.current && Object.keys(props.pepper.soilNutrients.current).length > 0;
+    
+    if (hasAdditions || hasCurrent) {
+      const current = getCurrentSoilNutrients(props.pepper.soilNutrients, props.pepper.stage);
 
-    const grams = entry.grams;
-    totalGrams += grams;
+      // Распределяем элементы по макро и микро
+      macroElementsList.forEach((el) => {
+        const value = current[el.symbol];
+        if (value != null && value > 0) {
+          macro[el.symbol] = value;
+          totalGrams += value;
+        }
+      });
 
-    // Обрабатываем макроэлементы
-    macroElementsList.forEach((el) => {
-      const percentage = entry.composition![el.symbol];
-      if (percentage !== undefined && percentage > 0) {
-        macro[el.symbol] += (percentage / 100) * grams;
-      }
+      microElementsList.forEach((el) => {
+        const value = current[el.symbol];
+        if (value != null && value > 0) {
+          micro[el.symbol] = value;
+          totalGrams += value;
+        }
+      });
+    }
+  }
+  
+  // Если нет данных в soilNutrients, используем старый способ
+  if (totalGrams === 0 && props.pepper.fertilizingHistory) {
+    // Fallback: суммируем элементы из всех удобрений (для старых данных)
+    props.pepper.fertilizingHistory.forEach((entry) => {
+      if (!entry.composition || !entry.grams) return;
+
+      const grams = entry.grams;
+      totalGrams += grams;
+
+      // Обрабатываем макроэлементы
+      macroElementsList.forEach((el) => {
+        const percentage = entry.composition![el.symbol];
+        if (percentage !== undefined && percentage > 0) {
+          macro[el.symbol] += (percentage / 100) * grams;
+        }
+      });
+
+      // Обрабатываем микроэлементы
+      microElementsList.forEach((el) => {
+        const percentage = entry.composition![el.symbol];
+        if (percentage !== undefined && percentage > 0) {
+          micro[el.symbol] += (percentage / 100) * grams;
+        }
+      });
     });
-
-    // Обрабатываем микроэлементы
-    microElementsList.forEach((el) => {
-      const percentage = entry.composition![el.symbol];
-      if (percentage !== undefined && percentage > 0) {
-        micro[el.symbol] += (percentage / 100) * grams;
-      }
-    });
-  });
+  }
 
   return { macro, micro, totalGrams };
 });
@@ -497,6 +570,35 @@ function isElementExcessive(symbol: string, type: 'macro' | 'micro'): boolean {
   const value = elementStats.value[type][symbol] || 0;
   const threshold = excessiveThresholds[type][symbol as keyof typeof excessiveThresholds.macro];
   return threshold !== undefined && value > threshold;
+}
+
+// Прогноз поглощения элемента
+function getAbsorptionForecast(symbol: string, type: 'macro' | 'micro'): string | null {
+  const currentValue = elementStats.value[type][symbol] || 0;
+  if (currentValue <= 0) return null;
+
+  const state = props.pepper.soilNutrients;
+  if (!state?.additions || state.additions.length === 0) return null;
+
+  // Вычисляем, сколько останется через 7 дней
+  const now = new Date();
+  const futureDate = new Date(now);
+  futureDate.setDate(futureDate.getDate() + 7);
+  const futureDateStr = futureDate.toISOString();
+
+  const futureNutrients = calculateSoilNutrients(state, futureDateStr, props.pepper.stage);
+  const futureValue = futureNutrients[symbol as keyof typeof futureNutrients] ?? 0;
+
+  if (futureValue <= 0.001) {
+    return 'Через 7 дней: полностью поглотится';
+  }
+
+  const reduction = ((currentValue - futureValue) / currentValue) * 100;
+  if (reduction < 1) {
+    return null; // Изменение незначительное
+  }
+
+  return `Через 7 дней: ~${futureValue.toFixed(type === 'macro' ? 1 : 2)} г (${reduction.toFixed(0)}% поглотится)`;
 }
 
 // История стадий роста
