@@ -5,6 +5,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -495,8 +496,171 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
   const deleteWateringBatch = async (batchId: string) => {
     ensureAuthenticated();
     if (!batchId) return;
+    
     const batchRef = doc(db, 'wateringBatches', batchId);
-    await deleteDoc(batchRef);
+    
+    // Сначала читаем batch и события вне транзакции (для подготовки данных)
+    const batchSnap = await getDoc(batchRef);
+    if (!batchSnap.exists()) {
+      throw new Error('Замес не найден');
+    }
+    const batchData = batchSnap.data() as FirestoreWateringBatch;
+    
+    if (batchData.userId !== currentUserId.value) {
+      throw new Error('Нет доступа к замесу');
+    }
+    
+    // Читаем все события полива для этого batch
+    const eventsCollection = collection(batchRef, 'events');
+    const eventsSnapshot = await getDocs(query(eventsCollection));
+    
+    // Собираем информацию о событиях
+    const eventInfo: Array<{
+      id: string;
+      appliedAt: string;
+      targets: Array<{ pepperId: string; volumeMl: number }>;
+    }> = [];
+    const affectedPepperIds = new Set<string>();
+    
+    eventsSnapshot.forEach((eventDoc) => {
+      const eventData = eventDoc.data() as FirestoreWateringEvent;
+      eventInfo.push({
+        id: eventDoc.id,
+        appliedAt: eventData.appliedAt,
+        targets: eventData.targets || [],
+      });
+      if (eventData.targets) {
+        eventData.targets.forEach((target) => {
+          affectedPepperIds.add(target.pepperId);
+        });
+      }
+    });
+    
+    // Создаем мапу: pepperId -> массив событий с объемом и датой
+    const pepperEventsMap = new Map<string, Array<{ date: string; volumeMl: number }>>();
+    eventInfo.forEach((event) => {
+      event.targets.forEach((target) => {
+        if (!pepperEventsMap.has(target.pepperId)) {
+          pepperEventsMap.set(target.pepperId, []);
+        }
+        pepperEventsMap.get(target.pepperId)!.push({
+          date: event.appliedAt,
+          volumeMl: target.volumeMl,
+        });
+      });
+    });
+    
+    // Используем транзакцию для каскадного удаления
+    await runTransaction(db, async (transaction) => {
+      // ВСЕ READS ПЕРВЫМИ
+      const batchSnapInTx = await transaction.get(batchRef);
+      if (!batchSnapInTx.exists()) {
+        throw new Error('Замес не найден');
+      }
+      
+      // Читаем все затронутые перцы
+      const pepperSnaps: Array<{
+        ref: ReturnType<typeof doc>;
+        snap: Awaited<ReturnType<typeof transaction.get>>;
+        pepperId: string;
+      }> = [];
+      
+      for (const pepperId of affectedPepperIds) {
+        const pepperRef = doc(db, 'peppers', pepperId);
+        const pepperSnap = await transaction.get(pepperRef);
+        pepperSnaps.push({ ref: pepperRef, snap: pepperSnap, pepperId });
+      }
+      
+      // ВСЕ WRITES ПОСЛЕ ВСЕХ READS
+      const now = new Date().toISOString();
+      
+      // Обновляем перцы: удаляем поливы из истории и записи из additions
+      for (const { ref: pepperRef, snap: pepperSnap, pepperId } of pepperSnaps) {
+        if (!pepperSnap.exists()) continue;
+        
+        const pepperData = pepperSnap.data() as {
+          userId?: string | null;
+          wateringHistory?: Array<{ date: string; volume?: number }>;
+          soilNutrients?: SoilNutrientState;
+        };
+        
+        // Проверяем доступ
+        if (pepperData.userId && pepperData.userId !== currentUserId.value) {
+          continue; // Пропускаем перцы других пользователей
+        }
+        
+        const pepperEvents = pepperEventsMap.get(pepperId) || [];
+        const eventDates = new Set(pepperEvents.map((e) => e.date.split('T')[0]));
+        const eventVolumes = new Map<string, number>();
+        pepperEvents.forEach((e) => {
+          const dateKey = e.date.split('T')[0];
+          eventVolumes.set(dateKey, (eventVolumes.get(dateKey) || 0) + e.volumeMl);
+        });
+        
+        const updates: Record<string, unknown> = {
+          updatedAt: now,
+        };
+        
+        // Удаляем поливы из wateringHistory, которые совпадают по дате и объему
+        if (pepperData.wateringHistory) {
+          const filteredHistory = pepperData.wateringHistory.filter((entry) => {
+            const entryDate = entry.date.split('T')[0];
+            if (!eventDates.has(entryDate)) {
+              return true; // Оставляем поливы с другими датами
+            }
+            // Если дата совпадает, проверяем объем
+            const expectedVolume = eventVolumes.get(entryDate);
+            if (expectedVolume && entry.volume === expectedVolume) {
+              return false; // Удаляем полив, если дата и объем совпадают
+            }
+            return true; // Оставляем, если объем не совпадает
+          });
+          updates.wateringHistory = filteredHistory;
+        }
+        
+        // Удаляем записи из soilNutrients.additions, связанные с этим batch
+        if (pepperData.soilNutrients?.additions) {
+          const filteredAdditions = pepperData.soilNutrients.additions.filter((addition) => {
+            if (addition.source === 'watering') {
+              const additionDate = addition.date.split('T')[0];
+              return !eventDates.has(additionDate);
+            }
+            return true; // Оставляем записи из других источников
+          });
+          
+          // Пересчитываем current на основе оставшихся additions
+          const updatedSoil: SoilNutrientState = {
+            ...pepperData.soilNutrients,
+            additions: filteredAdditions,
+            lastCalculatedAt: now,
+          };
+          
+          if (filteredAdditions.length > 0) {
+            updatedSoil.current = calculateSoilNutrients(updatedSoil, now);
+          } else {
+            updatedSoil.current = {};
+          }
+          
+          updates.soilNutrients = updatedSoil;
+        }
+        
+        // Обновляем userId для старых записей
+        if (!pepperData.userId) {
+          updates.userId = currentUserId.value;
+        }
+        
+        transaction.update(pepperRef, updates);
+      }
+      
+      // Удаляем все события
+      for (const event of eventInfo) {
+        const eventRef = doc(eventsCollection, event.id);
+        transaction.delete(eventRef);
+      }
+      
+      // Удаляем batch
+      transaction.delete(batchRef);
+    });
   };
 
   const applyWatering = async (payload: ApplyWateringPayload) => {
