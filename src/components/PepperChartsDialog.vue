@@ -147,6 +147,11 @@
                       <div class="text-caption text-grey-6">г</div>
                     </div>
                   </div>
+                  <div v-if="getAbsorptionForecast(element.symbol, 'macro')" class="q-mt-xs">
+                    <div class="text-caption text-grey-6">
+                      {{ getAbsorptionForecast(element.symbol, 'macro') }}
+                    </div>
+                  </div>
                   <div v-if="isElementExcessive(element.symbol, 'macro')" class="q-mt-xs">
                     <q-banner dense class="bg-warning text-white q-pa-xs">
                       <template v-slot:avatar>
@@ -182,6 +187,11 @@
                     <div class="col-2 text-right">
                       <div class="text-weight-medium">{{ elementStats.micro[element.symbol]?.toFixed(2) || 0 }}</div>
                       <div class="text-caption text-grey-6">г</div>
+                    </div>
+                  </div>
+                  <div v-if="getAbsorptionForecast(element.symbol, 'micro')" class="q-mt-xs">
+                    <div class="text-caption text-grey-6">
+                      {{ getAbsorptionForecast(element.symbol, 'micro') }}
                     </div>
                   </div>
                   <div v-if="isElementExcessive(element.symbol, 'micro')" class="q-mt-xs">
@@ -280,7 +290,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { Pepper } from './models';
-import { getCurrentSoilNutrients } from 'src/utils/nutrient-absorption';
+import {
+  getCurrentSoilNutrients,
+  calculateSoilNutrients,
+} from 'src/utils/nutrient-absorption';
 
 interface Props {
   modelValue: boolean;
@@ -557,6 +570,35 @@ function isElementExcessive(symbol: string, type: 'macro' | 'micro'): boolean {
   const value = elementStats.value[type][symbol] || 0;
   const threshold = excessiveThresholds[type][symbol as keyof typeof excessiveThresholds.macro];
   return threshold !== undefined && value > threshold;
+}
+
+// Прогноз поглощения элемента
+function getAbsorptionForecast(symbol: string, type: 'macro' | 'micro'): string | null {
+  const currentValue = elementStats.value[type][symbol] || 0;
+  if (currentValue <= 0) return null;
+
+  const state = props.pepper.soilNutrients;
+  if (!state?.additions || state.additions.length === 0) return null;
+
+  // Вычисляем, сколько останется через 7 дней
+  const now = new Date();
+  const futureDate = new Date(now);
+  futureDate.setDate(futureDate.getDate() + 7);
+  const futureDateStr = futureDate.toISOString();
+
+  const futureNutrients = calculateSoilNutrients(state, futureDateStr, props.pepper.stage);
+  const futureValue = futureNutrients[symbol as keyof typeof futureNutrients] ?? 0;
+
+  if (futureValue <= 0.001) {
+    return 'Через 7 дней: полностью поглотится';
+  }
+
+  const reduction = ((currentValue - futureValue) / currentValue) * 100;
+  if (reduction < 1) {
+    return null; // Изменение незначительное
+  }
+
+  return `Через 7 дней: ~${futureValue.toFixed(type === 'macro' ? 1 : 2)} г (${reduction.toFixed(0)}% поглотится)`;
 }
 
 // История стадий роста

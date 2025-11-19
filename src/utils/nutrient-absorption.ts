@@ -249,6 +249,57 @@ export function getCurrentSoilNutrients(
 }
 
 /**
+ * Вычисляет время до полного поглощения элемента (до 1% от начального)
+ * 
+ * @param currentAmount - текущее количество элемента (в граммах)
+ * @param halfLifeHours - период полураспада элемента в часах
+ * @param absorptionMultiplier - множитель скорости поглощения
+ * @returns время в часах до полного поглощения
+ */
+export function calculateFullAbsorptionTime(
+  currentAmount: number,
+  halfLifeHours: number,
+  absorptionMultiplier: number = 1.0,
+): number {
+  if (currentAmount <= 0) return 0;
+
+  const adjustedHalfLife = halfLifeHours / Math.max(absorptionMultiplier, 0.1);
+  // Время до 1%: t = -ln(0.01) * halfLife / ln(2)
+  const timeTo1Percent = (-Math.log(0.01) * adjustedHalfLife) / Math.log(2);
+
+  return Math.round(timeTo1Percent);
+}
+
+/**
+ * Генерирует историю изменения элементов за указанный период
+ * Полезно для построения графиков и прогнозирования
+ *
+ * @param state - состояние почвы
+ * @param days - количество дней для генерации истории
+ * @param growthStage - стадия роста растения
+ * @returns массив состояний элементов по датам
+ */
+export function generateNutrientHistory(
+  state: SoilNutrientState,
+  days: number = 30,
+  growthStage?: string,
+): Array<{ date: string; nutrients: FertilizerComposition }> {
+  const history: Array<{ date: string; nutrients: FertilizerComposition }> = [];
+  const now = new Date();
+
+  for (let i = days; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString();
+
+    const nutrients = calculateSoilNutrients(state, dateStr, growthStage);
+    history.push({ date: dateStr, nutrients });
+  }
+
+  return history;
+}
+
+/**
  * Очищает старые записи из истории внесений
  * Удаляет записи старше указанного количества дней, если остаток элементов незначим
  *
