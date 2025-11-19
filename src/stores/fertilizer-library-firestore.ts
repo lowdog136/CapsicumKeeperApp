@@ -13,7 +13,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import { db } from 'src/boot/firebase';
-import type { FertilizerComposition } from 'components/models';
+import type { FertilizerComposition, FertilizerAvailabilityType } from 'components/models';
 
 export interface Fertilizer {
   id: string;
@@ -25,6 +25,10 @@ export interface Fertilizer {
   isFavorite?: boolean;
   createdAt: string;
   updatedAt: string;
+  
+  // Настройки усвояемости
+  availabilityType?: FertilizerAvailabilityType | null; // Тип усвояемости (fast/medium/slow)
+  absorptionMultipliers?: Record<string, number> | null; // Множители скорости поглощения для каждого элемента
 }
 
 export const useFertilizerLibraryFirestore = defineStore('fertilizer-library-firestore', () => {

@@ -146,7 +146,11 @@ const hasPositiveNutrients = (nutrients: FertilizerComposition | null | undefine
   return Object.values(nutrients).some((value) => (value ?? 0) > 0);
 };
 
-const normalizeSoilState = (state: SoilNutrientState | null | undefined, now: string) => {
+const normalizeSoilState = (
+  state: SoilNutrientState | null | undefined,
+  now: string,
+  growthStage?: string,
+) => {
   // Если есть существующее состояние, используем его, иначе создаем новое
   const existingState = state ?? {
     current: {},
@@ -160,7 +164,7 @@ const normalizeSoilState = (state: SoilNutrientState | null | undefined, now: st
   // Пересчитываем current на основе истории (если есть история)
   let current = existingState.current ?? {};
   if (additions.length > 0) {
-    current = calculateSoilNutrients(existingState, now);
+    current = calculateSoilNutrients(existingState, now, growthStage);
   }
 
   return {
@@ -726,6 +730,7 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
         }
         const pepperData = snap.data() as {
           userId?: string | null;
+          stage?: string;
           soilNutrients?: SoilNutrientState;
           wateringSchedule?: WateringScheduleSettings;
           wateringHistory?: Array<{ date: string; volume?: number }>;
@@ -744,31 +749,37 @@ export const useMassWateringStore = defineStore('mass-watering', () => {
         const consumption = target.consumption ?? null;
         nutrientTotals = addNutrients(nutrientTotals, addition);
 
-        // Нормализуем состояние почвы
-        const normalizedSoil = normalizeSoilState(pepperData.soilNutrients, now);
+        // Нормализуем состояние почвы (с учетом стадии роста)
+        const growthStage = pepperData.stage;
+        const normalizedSoil = normalizeSoilState(pepperData.soilNutrients, now, growthStage);
 
         // Если есть элементы для добавления, добавляем запись в историю
         // Даже если addition пустой, обновляем lastWateredAt
         if (hasPositiveNutrients(addition)) {
+          // Получаем информацию об усвояемости из рецепта (если есть)
+          // TODO: В будущем можно получать информацию из ingredients рецепта
           const newAddition: NutrientAddition = {
             date: now,
             amount: addition,
             source: 'watering',
             sourceId: null, // будет установлен после создания события
+            // Информация об усвояемости будет добавлена позже, если рецепт содержит удобрения
+            availabilityType: 'medium', // По умолчанию средняя усвояемость для растворов
+            absorptionMultipliers: null,
           };
 
           // Добавляем новое внесение в историю
           normalizedSoil.additions = [...(normalizedSoil.additions ?? []), newAddition];
 
-          // Пересчитываем текущее состояние на основе всей истории
-          normalizedSoil.current = calculateSoilNutrients(normalizedSoil, now);
+          // Пересчитываем текущее состояние на основе всей истории (с учетом стадии роста)
+          normalizedSoil.current = calculateSoilNutrients(normalizedSoil, now, growthStage);
           normalizedSoil.lastCalculatedAt = now;
           normalizedSoil.lastFertilizedAt = now;
         } else {
           // Если нет элементов, но был полив, обновляем только lastWateredAt
           // и пересчитываем current на основе существующих additions
           if (normalizedSoil.additions && normalizedSoil.additions.length > 0) {
-            normalizedSoil.current = calculateSoilNutrients(normalizedSoil, now);
+            normalizedSoil.current = calculateSoilNutrients(normalizedSoil, now, growthStage);
             normalizedSoil.lastCalculatedAt = now;
           }
         }

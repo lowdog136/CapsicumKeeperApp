@@ -483,7 +483,7 @@ const elementStats = computed<ElementStats>(() => {
     const hasCurrent = props.pepper.soilNutrients.current && Object.keys(props.pepper.soilNutrients.current).length > 0;
     
     if (hasAdditions || hasCurrent) {
-      const current = getCurrentSoilNutrients(props.pepper.soilNutrients);
+      const current = getCurrentSoilNutrients(props.pepper.soilNutrients, props.pepper.stage);
 
       // Распределяем элементы по макро и микро
       macroElementsList.forEach((el) => {

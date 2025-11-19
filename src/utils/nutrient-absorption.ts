@@ -1,4 +1,9 @@
-import type { FertilizerComposition, SoilNutrientState, NutrientAddition } from 'src/components/models';
+import type {
+  FertilizerComposition,
+  SoilNutrientState,
+  NutrientAddition,
+  FertilizerAvailabilityType,
+} from 'src/components/models';
 
 /**
  * Скорости поглощения элементов растением
@@ -37,12 +42,14 @@ export const NUTRIENT_ABSORPTION_RATES: Record<keyof FertilizerComposition, Nutr
  * @param initialAmount - начальное количество элемента (в граммах)
  * @param hoursElapsed - сколько часов прошло с момента внесения
  * @param halfLifeHours - период полураспада элемента в часах
+ * @param absorptionMultiplier - множитель скорости поглощения (1.0 = базовое значение)
  * @returns остаток элемента в граммах
  */
 export function calculateRemainingAmount(
   initialAmount: number,
   hoursElapsed: number,
   halfLifeHours: number,
+  absorptionMultiplier: number = 1.0,
 ): number {
   if (hoursElapsed < 0) {
     return 0; // будущие внесения игнорируем
@@ -54,12 +61,77 @@ export function calculateRemainingAmount(
     return initialAmount; // если период полураспада некорректный, возвращаем начальное значение
   }
 
+  // Применяем множитель к периоду полураспада
+  // Если множитель > 1, элемент поглощается быстрее (меньший период полураспада)
+  // Если множитель < 1, элемент поглощается медленнее (больший период полураспада)
+  const adjustedHalfLife = halfLifeHours / Math.max(absorptionMultiplier, 0.1);
+
   // Экспоненциальное затухание
-  const decayConstant = Math.log(2) / halfLifeHours;
+  const decayConstant = Math.log(2) / adjustedHalfLife;
   const remaining = initialAmount * Math.exp(-decayConstant * hoursElapsed);
 
   // Округляем до 3 знаков после запятой
   return Math.round(remaining * 1000) / 1000;
+}
+
+/**
+ * Множитель скорости поглощения в зависимости от стадии роста
+ * Значения основаны на физиологии растений и потребностях на разных стадиях
+ */
+export function getGrowthStageMultiplier(stage?: string): number {
+  if (!stage) return 1.0;
+
+  const multipliers: Record<string, number> = {
+    'проращивание': 0.3,  // Медленное поглощение (корневая система только развивается)
+    'рассада': 0.6,       // Умеренное поглощение (активный рост листьев)
+    'вегетация': 1.5,     // Активное поглощение (максимальный рост)
+    'плодоношение': 1.2,  // Высокое поглощение (но азота меньше - см. getElementStageMultiplier)
+    'сбор урожая': 0.5,   // Сниженное поглощение (растение завершает цикл)
+  };
+
+  return multipliers[stage] ?? 1.0;
+}
+
+/**
+ * Множитель для конкретного элемента в зависимости от стадии роста
+ * Учитывает специфические потребности элементов на разных стадиях
+ */
+export function getElementStageMultiplier(
+  element: keyof FertilizerComposition,
+  stage?: string,
+): number {
+  if (!stage) return 1.0;
+
+  // При плодоношении азота нужно меньше (избыток ухудшает качество плодов)
+  if (element === 'N' && stage === 'плодоношение') {
+    return 0.5; // Снижаем потребность в азоте в 2 раза
+  }
+
+  // Фосфор и калий важны при плодоношении
+  if ((element === 'P' || element === 'K') && stage === 'плодоношение') {
+    return 1.3; // Увеличиваем потребность
+  }
+
+  // Для остальных элементов используем общий множитель стадии
+  return getGrowthStageMultiplier(stage);
+}
+
+/**
+ * Множитель усвояемости в зависимости от типа удобрения
+ * Значения основаны на исследованиях скорости растворения и усвоения удобрений
+ */
+export function getAvailabilityMultiplier(type?: FertilizerAvailabilityType | null): number {
+  if (!type) return 1.0;
+
+  // Базовые множители (можно расширять для кастомных типов)
+  const multipliers: Record<string, number> = {
+    'fast': 1.5,   // Быстро усвояемое (хелаты, жидкие) - поглощается в 1.5 раза быстрее
+    'medium': 1.0, // Средняя усвояемость (гранулированное) - базовое значение
+    'slow': 0.6,   // Медленно усвояемое (органическое, пролонгированное) - в 0.6 раза медленнее
+  };
+
+  // Если тип не найден, возвращаем среднее значение
+  return multipliers[type] ?? 1.0;
 }
 
 /**
@@ -68,11 +140,13 @@ export function calculateRemainingAmount(
  *
  * @param state - состояние почвы с историей внесений
  * @param asOfDate - дата, на которую нужно вычислить состояние (по умолчанию текущая)
+ * @param growthStage - стадия роста растения (для корректировки скорости поглощения)
  * @returns текущее состояние элементов в почве (в граммах)
  */
 export function calculateSoilNutrients(
   state: SoilNutrientState,
   asOfDate: string = new Date().toISOString(),
+  growthStage?: string,
 ): FertilizerComposition {
   const result: FertilizerComposition = {};
   const asOfTime = new Date(asOfDate).getTime();
@@ -113,10 +187,21 @@ export function calculateSoilNutrients(
         return;
       }
 
+      // Получаем множитель усвояемости для этого элемента
+      const elementMultiplier =
+        addition.absorptionMultipliers?.[elementKey] ??
+        getAvailabilityMultiplier(addition.availabilityType) ??
+        1.0;
+
+      // Применяем множитель стадии роста (с учетом специфики элемента)
+      const elementStageMultiplier = getElementStageMultiplier(elementKey, growthStage);
+      const finalMultiplier = elementMultiplier * elementStageMultiplier;
+
       const remaining = calculateRemainingAmount(
         elementAmount,
         hoursElapsed,
         rate.halfLifeHours,
+        finalMultiplier, // Передаем множитель
       );
       totalRemaining += remaining;
     });
@@ -137,7 +222,10 @@ export function calculateSoilNutrients(
  * @param state - состояние почвы
  * @returns текущее состояние элементов в почве
  */
-export function getCurrentSoilNutrients(state: SoilNutrientState | null | undefined): FertilizerComposition {
+export function getCurrentSoilNutrients(
+  state: SoilNutrientState | null | undefined,
+  growthStage?: string,
+): FertilizerComposition {
   if (!state) {
     return {};
   }
@@ -155,8 +243,8 @@ export function getCurrentSoilNutrients(state: SoilNutrientState | null | undefi
     }
   }
 
-  // Пересчитываем
-  const calculated = calculateSoilNutrients(state, now);
+  // Пересчитываем с учетом стадии роста
+  const calculated = calculateSoilNutrients(state, now, growthStage);
   return calculated;
 }
 
