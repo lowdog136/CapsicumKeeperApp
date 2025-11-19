@@ -177,7 +177,7 @@
             >
               <template #body-cell-volume="propsSlot">
                 <q-input
-                  v-model.number="propsSlot.row.volumeMl"
+                  v-model.number="propsSlot.row.plannedVolumeMl"
                   type="number"
                   dense
                   min="0"
@@ -480,8 +480,24 @@ const handleRecipeChange = (recipeId: string | null) => {
   const recipe = props.recipes.find((item) => item.id === recipeId);
   if (recipe) {
     selectedRecipe.value = recipe;
-    form.totalVolumeMl = recipe.waterVolumeMl;
-    form.remainingVolumeMl = recipe.waterVolumeMl;
+    // Устанавливаем объёмы из рецепта только если список растений пуст
+    // Если уже есть растения, не меняем totalVolumeMl (он должен быть суммой плановых объёмов)
+    if (targetEntries.length === 0) {
+      form.totalVolumeMl = recipe.waterVolumeMl;
+      form.remainingVolumeMl = recipe.waterVolumeMl;
+    } else {
+      // Если уже есть растения, обновляем remainingVolumeMl только если он равен старому totalVolumeMl
+      // Это означает, что пользователь еще не менял его вручную
+      if (form.remainingVolumeMl === form.totalVolumeMl) {
+        // Вычисляем сумму плановых объёмов
+        const totalPlanned = targetEntries.reduce(
+          (sum, item) => sum + (item.plannedVolumeMl || 0),
+          0,
+        );
+        form.remainingVolumeMl = totalPlanned > 0 ? totalPlanned : recipe.waterVolumeMl;
+      }
+      // totalVolumeMl не меняем, если уже есть растения - он должен быть суммой плановых объёмов
+    }
     if (recipe.validForHours) {
       const prepared = form.preparedAt ? new Date(form.preparedAt) : new Date();
       const expires = new Date(prepared.getTime() + recipe.validForHours * 60 * 60 * 1000);
@@ -578,14 +594,31 @@ async function handleSubmit() {
   const nutrientsPerLiter = selectedRecipe.value?.nutrientsPerLiter ?? null;
   const totalNutrients = selectedRecipe.value?.totalNutrients ?? null;
 
+  // Вычисляем сумму плановых объёмов для всех растений
+  const totalPlannedVolume = targetEntries.reduce(
+    (sum, item) => sum + (item.plannedVolumeMl || 0),
+    0,
+  );
+
+  // Используем сумму плановых объёмов как totalVolumeMl, если она больше 0
+  // Иначе используем значение из формы
+  const finalTotalVolume = totalPlannedVolume > 0 ? totalPlannedVolume : Number(form.totalVolumeMl);
+
+  // remainingVolumeMl должен быть равен totalVolumeMl или сумме плановых объёмов
+  // Но не больше totalVolumeMl
+  const finalRemainingVolume = Math.min(
+    Number(form.remainingVolumeMl),
+    finalTotalVolume,
+  );
+
   emit('save', {
     name: form.name,
     description: form.description || null,
     recipeId: form.recipeId || null,
     preparedAt: form.preparedAt ? new Date(form.preparedAt).toISOString() : null,
     expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
-    totalVolumeMl: Number(form.totalVolumeMl),
-    remainingVolumeMl: Number(form.remainingVolumeMl),
+    totalVolumeMl: finalTotalVolume,
+    remainingVolumeMl: finalRemainingVolume,
     waterTemperatureC: form.waterTemperatureC ?? null,
     nutrientsPerLiter,
     totalNutrients,
