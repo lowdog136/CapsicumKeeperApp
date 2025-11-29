@@ -55,6 +55,7 @@ import WateringEntryForm from './WateringEntryForm.vue';
 import FertilizingEntryForm from './FertilizingEntryForm.vue';
 import TreatmentEntryForm from './TreatmentEntryForm.vue';
 import ObservationEntryForm from './ObservationEntryForm.vue';
+import { useNotifications } from 'src/composables/useNotifications';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -128,24 +129,18 @@ function updateForm(newValue: any) {
   form.value = { ...newValue };
 }
 
+const { error: showError } = useNotifications();
+
 function saveEntry() {
   // Валидация
   if (!form.value.date) {
-    $q.notify({
-      color: 'negative',
-      message: 'Дата обязательна',
-      icon: 'error',
-    });
+    showError('Дата обязательна');
     return;
   }
 
   // Специфичная валидация по типу
   if (props.type === 'watering' && (!form.value.volume || form.value.volume <= 0)) {
-    $q.notify({
-      color: 'negative',
-      message: 'Объем воды должен быть больше 0',
-      icon: 'error',
-    });
+    showError('Объем воды должен быть больше 0');
     return;
   }
 
@@ -153,11 +148,7 @@ function saveEntry() {
     props.type === 'fertilizing' &&
     (!form.value.note || !form.value.grams || form.value.grams <= 0)
   ) {
-    $q.notify({
-      color: 'negative',
-      message: 'Заполните название и количество удобрения',
-      icon: 'error',
-    });
+    showError('Заполните название и количество удобрения');
     return;
   }
 
@@ -165,20 +156,12 @@ function saveEntry() {
     props.type === 'treatment' &&
     (!form.value.agent || !form.value.volume || form.value.volume <= 0)
   ) {
-    $q.notify({
-      color: 'negative',
-      message: 'Заполните средство и объем обработки',
-      icon: 'error',
-    });
+    showError('Заполните средство и объем обработки');
     return;
   }
 
   if (props.type === 'observation' && (!form.value.leafCondition || !form.value.note)) {
-    $q.notify({
-      color: 'negative',
-      message: 'Заполните состояние листьев и заметки',
-      icon: 'error',
-    });
+    showError('Заполните состояние листьев и заметки');
     return;
   }
 

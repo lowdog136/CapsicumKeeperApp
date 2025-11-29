@@ -15,6 +15,8 @@ import {
 } from 'firebase/firestore';
 import type { Pepper } from 'src/components/models';
 import { useUserStore } from './user-store';
+import { useErrorHandler } from 'src/composables/useErrorHandler';
+import { useLogger } from 'src/composables/useLogger';
 
 export const usePepperFirestore = defineStore('pepperFirestore', () => {
   // State
@@ -22,6 +24,9 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
   let unsubscribe: (() => void) | null = null;
+  
+  const { handleErrorWithStore } = useErrorHandler();
+  const logger = useLogger('PepperFirestore');
 
   const userStore = useUserStore();
 
@@ -62,7 +67,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
       unsubscribe = onSnapshot(
         q,
         (querySnapshot) => {
-          console.log('✅ Получены изменения перцев, документов:', querySnapshot.size);
+          logger.log('Получены изменения перцев, документов:', querySnapshot.size);
 
           // Обновляем массив перцев с нормализацией данных для отображения
           peppers.value = querySnapshot.docs.map((docSnapshot) => {
@@ -93,16 +98,14 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
           loading.value = false;
         },
         (err) => {
-          console.error('❌ Ошибка при получении изменений перцев:', err);
-          error.value = `Ошибка при получении изменений: ${err.message}`;
+          handleErrorWithStore(err, error, 'Ошибка при получении изменений перцев');
           loading.value = false;
         },
       );
 
-      console.log('✅ Подписка на изменения перцев установлена');
-    } catch (error) {
-      console.error('Error fetching peppers:', error);
-      error.value = 'Ошибка загрузки перцев: ' + (error as Error).message;
+      logger.log('Подписка на изменения перцев установлена');
+    } catch (err) {
+      handleErrorWithStore(err, error, 'Ошибка загрузки перцев');
       peppers.value = [];
       loading.value = false;
     }
@@ -113,7 +116,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
     if (unsubscribe) {
       unsubscribe();
       unsubscribe = null;
-      console.log('✅ Отписаны от изменений перцев');
+      logger.log('Отписаны от изменений перцев');
     }
   };
 
@@ -282,10 +285,11 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
       };
 
       await addDoc(collection(db, 'peppers'), pepperData);
+      logger.log('Перец добавлен в Firestore');
       // onSnapshot автоматически обновит список перцев
-    } catch (error) {
-      console.error('Error adding pepper:', error);
-      throw error;
+    } catch (err) {
+      logger.error('Error adding pepper:', err);
+      throw err;
     }
   };
 
@@ -314,7 +318,7 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
 
       // Проверяем, есть ли что обновлять
       if (Object.keys(cleanPepper).length === 0) {
-        console.warn('No valid data to update');
+        logger.warn('No valid data to update');
         return;
       }
 
@@ -323,13 +327,14 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
         updatedAt: new Date().toISOString(),
       };
 
-      console.log('Updating pepper with data:', updateData);
+      logger.debug('Updating pepper with data:', updateData);
 
       await updateDoc(firestoreDoc(db, 'peppers', id), updateData);
+      logger.log('Перец обновлен в Firestore');
       // onSnapshot автоматически обновит список перцев
-    } catch (error) {
-      console.error('Error updating pepper:', error);
-      throw error;
+    } catch (err) {
+      logger.error('Error updating pepper:', err);
+      throw err;
     }
   };
 
@@ -413,9 +418,10 @@ export const usePepperFirestore = defineStore('pepperFirestore', () => {
         }
       });
       // onSnapshot автоматически обновит список перцев
-    } catch (error) {
-      console.error('Error deleting pepper:', error);
-      throw error;
+      logger.log('Перец удален из Firestore');
+    } catch (err) {
+      logger.error('Error deleting pepper:', err);
+      throw err;
     }
   };
 

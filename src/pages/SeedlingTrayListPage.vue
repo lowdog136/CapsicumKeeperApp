@@ -77,6 +77,8 @@ import { useRouter } from 'vue-router';
 import { useSeedlingTrayStore, type SeedlingTray } from 'stores/seedling-trays-firestore';
 import SeedlingTrayCard from 'components/SeedlingTrayCard.vue';
 import SeedlingTrayFormDialog from 'components/SeedlingTrayFormDialog.vue';
+import { useNotifications } from 'src/composables/useNotifications';
+import { useErrorHandler } from 'src/composables/useErrorHandler';
 
 defineOptions({
   name: 'SeedlingTrayListPage',
@@ -123,6 +125,9 @@ const openTray = (trayId: string) => {
   $router.push({ path: `/seedling-trays/${trayId}` });
 };
 
+const { success, error: showError } = useNotifications();
+const { handleError } = useErrorHandler();
+
 const handleSave = async (payload: any) => {
   try {
     actionInProgress.value = true;
@@ -130,28 +135,15 @@ const handleSave = async (payload: any) => {
     if (payload.id) {
       const { id, ...updates } = payload;
       await trayStore.updateTray(id, updates);
-      $q.notify({
-        color: 'positive',
-        message: 'Кассета обновлена',
-        icon: 'check',
-      });
+      success('Кассета обновлена');
     } else {
       await trayStore.createTray(payload);
-      $q.notify({
-        color: 'positive',
-        message: 'Кассета создана',
-        icon: 'check',
-      });
+      success('Кассета создана');
     }
 
     formDialogVisible.value = false;
-  } catch (error: any) {
-    console.error('[SeedlingTrayListPage] save error:', error);
-    $q.notify({
-      color: 'negative',
-      message: error.message || 'Не удалось сохранить кассету',
-      icon: 'error',
-    });
+  } catch (err: any) {
+    handleError(err, 'Ошибка при сохранении кассеты');
   } finally {
     actionInProgress.value = false;
   }
@@ -171,18 +163,9 @@ const confirmDelete = (tray: SeedlingTray) => {
     try {
       actionInProgress.value = true;
       await trayStore.deleteTray(tray.id);
-      $q.notify({
-        color: 'positive',
-        message: 'Кассета удалена',
-        icon: 'check',
-      });
-    } catch (error: any) {
-      console.error('[SeedlingTrayListPage] delete error:', error);
-      $q.notify({
-        color: 'negative',
-        message: error.message || 'Не удалось удалить кассету',
-        icon: 'error',
-      });
+      success('Кассета удалена');
+    } catch (err: any) {
+      handleError(err, 'Ошибка при удалении кассеты');
     } finally {
       actionInProgress.value = false;
     }

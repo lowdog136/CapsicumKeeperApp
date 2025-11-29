@@ -15,6 +15,8 @@ import {
 import { db } from 'src/boot/firebase';
 import { useUserStore } from './user-store';
 import type { RoadmapItem } from 'src/components/models';
+import { useErrorHandler } from 'src/composables/useErrorHandler';
+import { useLogger } from 'src/composables/useLogger';
 
 type RoadmapUpdate = Omit<RoadmapItem, 'id' | 'createdAt' | 'assignee' | 'updatedAt'>;
 
@@ -30,26 +32,23 @@ export const useRoadmapStore = defineStore('roadmap', () => {
   const totalPages = computed(() => Math.ceil(items.value.length / itemsPerPage.value));
 
   const userStore = useUserStore();
+  const { handleErrorWithStore } = useErrorHandler();
+  const logger = useLogger('RoadmapStore');
 
   // Получить все элементы дорожной карты пользователя
   const fetchItems = async () => {
-    console.log('=== Начало загрузки элементов дорожной карты ===');
-
+    logger.group('Загрузка элементов дорожной карты');
     loading.value = true;
     error.value = null;
 
     try {
-      console.log('🗄️ Подключение к Firestore...');
-
       if (!db) {
         throw new Error('Firestore не инициализирован');
       }
 
-      console.log('✅ Firestore подключен, создаем запрос...');
-
       // Отписываемся от предыдущего слушателя, если он есть
       if (unsubscribe) {
-        console.log('🔄 Отписываемся от предыдущего слушателя');
+        logger.log('Отписываемся от предыдущего слушателя');
         unsubscribe();
         unsubscribe = null;
       }
@@ -60,91 +59,78 @@ export const useRoadmapStore = defineStore('roadmap', () => {
         orderBy('createdAt', 'desc'), // Сортируем по дате создания
       );
 
-      console.log('🔍 Подписываемся на изменения коллекции roadmap (все элементы)...');
+      logger.log('Подписываемся на изменения коллекции roadmap');
 
       // Подписываемся на изменения в реальном времени
       unsubscribe = onSnapshot(
         q,
         (querySnapshot) => {
-          console.log('✅ Получены изменения, документов:', querySnapshot.size);
-          console.log('🔄 Тип изменений: onSnapshot callback вызван');
+          logger.log('Получены изменения, документов:', querySnapshot.size);
 
           const newItems = querySnapshot.docs.map((doc) => {
             const data = doc.data();
-            console.log('📄 Документ:', doc.id, '=>', data);
             return {
               id: doc.id,
               ...data,
             };
           }) as RoadmapItem[];
 
-          console.log('🔄 Старое количество элементов:', items.value.length);
-          console.log('🔄 Новое количество элементов:', newItems.length);
-          console.log(
-            '🔄 Элементы изменились:',
-            JSON.stringify(items.value) !== JSON.stringify(newItems),
-          );
-
           items.value = newItems;
-
-          console.log('✅ Элементы обновлены в локальном состоянии:', items.value.length);
+          logger.log('Элементы обновлены в локальном состоянии:', items.value.length);
           loading.value = false;
         },
         (err) => {
-          console.error('❌ Ошибка при получении изменений:', err);
-          error.value = `Ошибка при получении изменений: ${err.message}`;
+          handleErrorWithStore(err, error, 'Ошибка при получении изменений');
           loading.value = false;
         },
       );
 
-      console.log('✅ Подписка на изменения установлена');
+      logger.log('Подписка на изменения установлена');
     } catch (err) {
-      console.error('❌ Ошибка при настройке подписки:', err);
-      console.error('❌ Тип ошибки:', typeof err);
-      console.error(
-        '❌ Сообщение ошибки:',
-        err instanceof Error ? err.message : 'Неизвестная ошибка',
-      );
-      console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
-
-      error.value = `Ошибка при настройке подписки: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
+      handleErrorWithStore(err, error, 'Ошибка при настройке подписки');
       loading.value = false;
+    } finally {
+      logger.groupEnd();
+    }
+  };
+
+  // Проверка прав доступа
+  const checkEditPermissions = (): boolean => {
+    if (!userStore.user) {
+      error.value = 'Пользователь не авторизован';
+      return false;
     }
 
-    console.log('=== Конец настройки подписки на элементы дорожной карты ===');
+    if (userStore.user.email !== 'lowdog136@gmail.com') {
+      error.value = 'У вас нет прав на редактирование элементов дорожной карты';
+      return false;
+    }
+
+    return true;
   };
 
   // Добавить новый элемент
   const addItem = async (item: Omit<RoadmapItem, 'id' | 'createdAt' | 'updatedAt'>) => {
-    console.log('=== Начало добавления элемента дорожной карты ===');
+    logger.group('Добавление элемента дорожной карты');
 
-    if (!userStore.user) {
-      error.value = 'Пользователь не авторизован';
-      console.error('❌ Пользователь не авторизован');
+    if (!checkEditPermissions()) {
+      logger.warn('Пользователь не имеет прав на добавление');
       return null;
     }
 
-    // Проверяем права на редактирование
-    if (userStore.user.email !== 'lowdog136@gmail.com') {
-      error.value = 'У вас нет прав на добавление элементов дорожной карты';
-      console.error('❌ Пользователь не имеет прав на редактирование:', userStore.user.email);
-      return null;
-    }
-
-    console.log(
-      '✅ Пользователь авторизован и имеет права на редактирование:',
-      userStore.user.email,
-    );
-    console.log('📝 Исходный элемент:', item);
-
+    logger.log('Исходный элемент:', item);
     loading.value = true;
     error.value = null;
 
     try {
+      if (!db) {
+        throw new Error('Firestore не инициализирован');
+      }
+
       const now = new Date().toISOString();
       const newItem = {
         ...item,
-        assignee: userStore.user.email!,
+        assignee: userStore.user!.email!,
         createdAt: now,
         updatedAt: now,
         // Убираем undefined значения
@@ -153,22 +139,12 @@ export const useRoadmapStore = defineStore('roadmap', () => {
         estimatedEffort: item.estimatedEffort || null,
       };
 
-      console.log('🔧 Подготовленный элемент для Firestore:', newItem);
-      console.log('🗄️ Попытка подключения к Firestore...');
-
-      // Проверяем подключение к Firestore
-      if (!db) {
-        throw new Error('Firestore не инициализирован');
-      }
-
-      console.log('✅ Firestore подключен, добавляем документ...');
+      logger.log('Подготовленный элемент для Firestore:', newItem);
 
       const docRef = await addDoc(collection(db, 'roadmap'), newItem);
-      console.log('✅ Элемент добавлен с ID:', docRef.id);
+      logger.log('Элемент добавлен с ID:', docRef.id);
 
       // Не обновляем локальное состояние вручную - это сделает onSnapshot
-      console.log('✅ Элемент добавлен в Firestore, локальное состояние обновится автоматически');
-
       const createdItem: RoadmapItem = {
         id: docRef.id,
         ...newItem,
@@ -176,50 +152,33 @@ export const useRoadmapStore = defineStore('roadmap', () => {
 
       return createdItem;
     } catch (err) {
-      console.error('❌ Ошибка при добавлении элемента:', err);
-      console.error('❌ Тип ошибки:', typeof err);
-      console.error(
-        '❌ Сообщение ошибки:',
-        err instanceof Error ? err.message : 'Неизвестная ошибка',
-      );
-      console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
-
-      error.value = `Ошибка при добавлении элемента: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
+      handleErrorWithStore(err, error, 'Ошибка при добавлении элемента');
       return null;
     } finally {
       loading.value = false;
-      console.log('=== Конец добавления элемента дорожной карты ===');
+      logger.groupEnd();
     }
   };
 
   // Обновить элемент
   const updateItem = async (id: string, updates: RoadmapUpdate) => {
-    console.log('=== Начало обновления элемента дорожной карты ===');
-    console.log('🆔 ID элемента:', id);
-    console.log('📝 Обновления:', updates);
+    logger.group('Обновление элемента дорожной карты');
+    logger.log('ID элемента:', id);
+    logger.log('Обновления:', updates);
 
-    if (!userStore.user) {
-      error.value = 'Пользователь не авторизован';
-      console.error('❌ Пользователь не авторизован');
+    if (!checkEditPermissions()) {
+      logger.warn('Пользователь не имеет прав на обновление');
       return;
     }
-
-    // Проверяем права на редактирование
-    if (userStore.user.email !== 'lowdog136@gmail.com') {
-      error.value = 'У вас нет прав на редактирование элементов дорожной карты';
-      console.error('❌ Пользователь не имеет прав на редактирование:', userStore.user.email);
-      return;
-    }
-
-    console.log(
-      '✅ Пользователь авторизован и имеет права на редактирование:',
-      userStore.user.email,
-    );
 
     loading.value = true;
     error.value = null;
 
     try {
+      if (!db) {
+        throw new Error('Firestore не инициализирован');
+      }
+
       const updateData = {
         ...updates,
         updatedAt: new Date().toISOString(),
@@ -232,69 +191,49 @@ export const useRoadmapStore = defineStore('roadmap', () => {
         updateData.completedAt = new Date().toISOString();
       }
 
-      console.log('🔧 Подготовленные данные для обновления:', updateData);
-      console.log('🗄️ Попытка подключения к Firestore...');
-
-      if (!db) {
-        throw new Error('Firestore не инициализирован');
-      }
-
-      console.log('✅ Firestore подключен, обновляем документ...');
+      logger.log('Подготовленные данные для обновления:', updateData);
 
       await updateDoc(doc(db, 'roadmap', id), updateData);
-      console.log('✅ Элемент обновлен в Firestore, локальное состояние обновится автоматически');
+      logger.log('Элемент обновлен в Firestore, локальное состояние обновится автоматически');
 
       // Временное принудительное обновление локального состояния
       const updatedItemIndex = items.value.findIndex((item) => item.id === id);
       if (updatedItemIndex !== -1) {
-        console.log('🔄 Принудительно обновляем локальное состояние...');
+        logger.log('Принудительно обновляем локальное состояние');
         const item = items.value[updatedItemIndex];
         if (item) {
-          item.title = updateData.title;
-          item.description = updateData.description;
-          item.category = updateData.category;
-          item.priority = updateData.priority;
-          item.status = updateData.status;
-          item.estimatedEffort = updateData.estimatedEffort;
-          item.targetVersion = updateData.targetVersion;
-          item.notes = updateData.notes;
-          item.updatedAt = updateData.updatedAt;
-          if (updateData.completedAt) {
-            item.completedAt = updateData.completedAt;
-          }
-          console.log('✅ Локальное состояние обновлено принудительно');
+          Object.assign(item, {
+            title: updateData.title,
+            description: updateData.description,
+            category: updateData.category,
+            priority: updateData.priority,
+            status: updateData.status,
+            estimatedEffort: updateData.estimatedEffort,
+            targetVersion: updateData.targetVersion,
+            notes: updateData.notes,
+            updatedAt: updateData.updatedAt,
+            ...(updateData.completedAt && { completedAt: updateData.completedAt }),
+          });
+          logger.log('Локальное состояние обновлено принудительно');
         }
-      } else {
-        console.log('⚠️ Элемент не найден в локальном состоянии для принудительного обновления');
       }
 
       // Не обновляем локальное состояние вручную - это сделает onSnapshot
     } catch (err) {
-      console.error('❌ Ошибка при обновлении элемента:', err);
-      console.error('❌ Тип ошибки:', typeof err);
-      console.error(
-        '❌ Сообщение ошибки:',
-        err instanceof Error ? err.message : 'Неизвестная ошибка',
-      );
-      console.error('❌ Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
-
-      error.value = `Ошибка при обновлении элемента: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`;
+      handleErrorWithStore(err, error, 'Ошибка при обновлении элемента');
     } finally {
       loading.value = false;
-      console.log('=== Конец обновления элемента дорожной карты ===');
+      logger.groupEnd();
     }
   };
 
   // Удалить элемент
   const deleteItem = async (id: string) => {
-    if (!userStore.user) {
-      error.value = 'Пользователь не авторизован';
-      return;
-    }
+    logger.group('Удаление элемента дорожной карты');
+    logger.log('ID элемента:', id);
 
-    // Проверяем права на редактирование
-    if (userStore.user.email !== 'lowdog136@gmail.com') {
-      error.value = 'У вас нет прав на удаление элементов дорожной карты';
+    if (!checkEditPermissions()) {
+      logger.warn('Пользователь не имеет прав на удаление');
       return;
     }
 
@@ -302,15 +241,19 @@ export const useRoadmapStore = defineStore('roadmap', () => {
     error.value = null;
 
     try {
+      if (!db) {
+        throw new Error('Firestore не инициализирован');
+      }
+
       await deleteDoc(doc(db, 'roadmap', id));
-      console.log('✅ Элемент удален из Firestore, локальное состояние обновится автоматически');
+      logger.log('Элемент удален из Firestore, локальное состояние обновится автоматически');
 
       // Не обновляем локальное состояние вручную - это сделает onSnapshot
     } catch (err) {
-      console.error('Ошибка при удалении элемента:', err);
-      error.value = 'Ошибка при удалении элемента';
+      handleErrorWithStore(err, error, 'Ошибка при удалении элемента');
     } finally {
       loading.value = false;
+      logger.groupEnd();
     }
   };
 

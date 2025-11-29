@@ -21,6 +21,8 @@ import type {
   HeatLevelInfo,
   CapsicumSpecies,
 } from 'src/components/models';
+import { useErrorHandler } from 'src/composables/useErrorHandler';
+import { useLogger } from 'src/composables/useLogger';
 
 export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
   const varieties = ref<PepperVariety[]>([]);
@@ -28,6 +30,9 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
   const error = ref<string | null>(null);
   const lastCheckDate = ref<string | null>(null);
   let unsubscribe: (() => void) | null = null;
+  
+  const { handleErrorWithStore } = useErrorHandler();
+  const logger = useLogger('VarietyLibrary');
 
   // Загрузка даты последней проверки из localStorage
   const loadLastCheckDate = () => {
@@ -203,7 +208,7 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
     if (unsubscribe) {
       unsubscribe();
       unsubscribe = null;
-      console.log('✅ Отписаны от изменений сортов');
+      logger.log('Отписаны от изменений сортов');
     }
   };
 
@@ -220,10 +225,10 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
       };
 
       await addDoc(collection(db, 'pepper-varieties'), varietyData);
+      logger.log('Сорт добавлен в Firestore');
       // onSnapshot автоматически обновит список сортов
     } catch (err) {
-      error.value = 'Ошибка добавления сорта: ' + (err as Error).message;
-      console.error('Error adding variety:', err);
+      handleErrorWithStore(err, error, 'Ошибка добавления сорта');
       throw err;
     } finally {
       loading.value = false;
@@ -242,10 +247,10 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
       };
 
       await updateDoc(varietyRef, updateData);
+      logger.log('Сорт обновлен в Firestore');
       // onSnapshot автоматически обновит список сортов
     } catch (err) {
-      error.value = 'Ошибка обновления сорта: ' + (err as Error).message;
-      console.error('Error updating variety:', err);
+      handleErrorWithStore(err, error, 'Ошибка обновления сорта');
       throw err;
     } finally {
       loading.value = false;
@@ -258,10 +263,10 @@ export const useVarietyLibraryStore = defineStore('varietyLibrary', () => {
 
     try {
       await deleteDoc(doc(db, 'pepper-varieties', id));
+      logger.log('Сорт удален из Firestore');
       // onSnapshot автоматически обновит список сортов
     } catch (err) {
-      error.value = 'Ошибка удаления сорта: ' + (err as Error).message;
-      console.error('Error deleting variety:', err);
+      handleErrorWithStore(err, error, 'Ошибка удаления сорта');
       throw err;
     } finally {
       loading.value = false;

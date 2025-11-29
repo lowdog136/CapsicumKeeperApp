@@ -198,10 +198,16 @@ import { useUserStore } from 'src/stores/user-store';
 import RoadmapItemCard from 'src/components/RoadmapItemCard.vue';
 import RoadmapItemForm from 'src/components/RoadmapItemForm.vue';
 import type { RoadmapItem } from 'src/components/models';
+import { useNotifications } from 'src/composables/useNotifications';
+import { useErrorHandler } from 'src/composables/useErrorHandler';
+import { useLogger } from 'src/composables/useLogger';
 
 const $q = useQuasar();
 const roadmapStore = useRoadmapStore();
 const userStore = useUserStore();
+const { success, error: showError } = useNotifications();
+const { handleError } = useErrorHandler();
+const logger = useLogger('RoadmapPage');
 
 // Состояние
 const showAddDialog = ref(false);
@@ -238,7 +244,7 @@ const categoryFilterOptions = [
 // Вычисляемые свойства
 const stats = computed(() => roadmapStore.stats);
 const items = computed(() => {
-  console.log('🔄 items computed вызван, количество элементов:', roadmapStore.items.length);
+  logger.debug('items computed вызван, количество элементов:', roadmapStore.items.length);
   return roadmapStore.items;
 });
 
@@ -330,51 +336,42 @@ const editItem = (item: RoadmapItem) => {
 };
 
 const saveItem = async (itemData: Omit<RoadmapItem, 'id' | 'createdAt' | 'updatedAt'>) => {
-  console.log('=== Начало сохранения элемента дорожной карты ===');
-  console.log('📝 Данные элемента:', itemData);
-  console.log('✏️ Режим редактирования:', !!editingItem.value);
-  console.log('🆔 ID редактируемого элемента:', editingItem.value?.id);
+  logger.group('Сохранение элемента дорожной карты');
+  logger.log('Данные элемента:', itemData);
+  logger.log('Режим редактирования:', !!editingItem.value);
+  logger.log('ID редактируемого элемента:', editingItem.value?.id);
 
   try {
     if (editingItem.value) {
       // Обновление существующего элемента
-      console.log('🔄 Обновляем существующий элемент...');
+      logger.log('Обновляем существующий элемент...');
       await roadmapStore.updateItem(editingItem.value.id, itemData);
-      console.log('✅ Элемент обновлен успешно');
-      alert('Элемент обновлен успешно!');
+      logger.log('Элемент обновлен успешно');
+      success('Элемент обновлен успешно!');
     } else {
       // Добавление нового элемента
-      console.log('➕ Добавляем новый элемент...');
+      logger.log('Добавляем новый элемент...');
       const result = await roadmapStore.addItem(itemData);
       if (result) {
-        console.log('✅ Элемент добавлен успешно');
-        alert('Элемент добавлен успешно!');
+        logger.log('Элемент добавлен успешно');
+        success('Элемент добавлен успешно!');
       }
     }
-  } catch (error) {
-    console.error('❌ Ошибка при сохранении:', error);
-    console.error('❌ Тип ошибки:', typeof error);
-    console.error(
-      '❌ Сообщение ошибки:',
-      error instanceof Error ? error.message : 'Неизвестная ошибка',
-    );
-    alert(
-      `Ошибка при сохранении: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
-    );
+  } catch (err) {
+    handleError(err, 'Ошибка при сохранении элемента');
   } finally {
     editingItem.value = undefined;
-    console.log('=== Конец сохранения элемента дорожной карты ===');
+    logger.groupEnd();
   }
 };
 
 const deleteItem = async (id: string) => {
   try {
     await roadmapStore.deleteItem(id);
-    console.log('✅ Элемент удален успешно');
-    alert('Элемент удален успешно!');
-  } catch (error) {
-    console.error('❌ Ошибка при удалении:', error);
-    alert(`Ошибка при удалении: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    logger.log('Элемент удален успешно');
+    success('Элемент удален успешно!');
+  } catch (err) {
+    handleError(err, 'Ошибка при удалении элемента');
   }
 };
 
@@ -486,9 +483,9 @@ const debugAllItems = async () => {
 watch(
   () => userStore.user,
   (newUser) => {
-    console.log('👤 Изменение пользователя:', newUser?.email);
+    logger.log('Изменение пользователя:', newUser?.email);
     // Загружаем данные для всех пользователей (публичная дорожная карта)
-    console.log('🔄 Загрузка публичной дорожной карты');
+    logger.log('Загрузка публичной дорожной карты');
     fetchItems();
   },
   { immediate: true },
@@ -499,7 +496,7 @@ watch(
   [statusFilter, priorityFilter, categoryFilter],
   () => {
     if (roadmapStore.currentPage > 1) {
-      console.log('🔄 Сброс страницы при изменении фильтров');
+      logger.log('Сброс страницы при изменении фильтров');
       roadmapStore.currentPage = 1;
     }
   },
