@@ -409,9 +409,25 @@
                 dense
                 emit-value
                 map-options
+                clearable
+                @update:model-value="(val) => { 
+                  colorInput = val; 
+                  console.log('colorInput обновлен:', val);
+                  // Автоматически добавляем цвет при выборе из списка
+                  if (val) {
+                    addColorFromInput(val);
+                  }
+                }"
               />
-              <q-input v-model="customColor" label="Свой цвет (на русском)" dense class="q-mt-sm" />
-              <q-btn flat color="primary" label="Добавить" @click="addColor" class="q-ml-sm" />
+              <q-input 
+                v-model="customColor" 
+                label="Свой цвет (на русском)" 
+                dense 
+                class="q-mt-sm"
+                @update:model-value="(val) => { customColor = val; console.log('customColor обновлен:', val); }"
+                @keyup.enter="addColor"
+              />
+              <q-btn flat color="primary" label="Добавить" @click="addColor" class="q-mt-sm" />
             </div>
             <div class="q-mb-sm">
               <q-select
@@ -671,9 +687,10 @@
 import { onMounted, ref, computed, watch } from 'vue';
 import { useVarietyLibraryV2Store, type PepperVarietyV2 } from 'stores/variety-library-v2';
 import { useUserStore } from 'stores/user-store';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from 'src/boot/firebase';
 import { useQuasar } from 'quasar';
+import { globalCache } from 'src/composables/useCache';
 
 const store = useVarietyLibraryV2Store();
 const userStore = useUserStore();
@@ -979,8 +996,30 @@ const filteredItems = computed(() => {
 });
 
 function openEdit(variety: any) {
+  console.log('openEdit вызвана для сорта:', variety.name, variety.id);
+  console.log('Цвета сорта:', variety.color);
+  
+  // Сначала сбрасываем все поля, чтобы избежать подстановки старых значений
+  editColors.value = [];
+  colorInput.value = '';
+  customColor.value = '';
+  plantHeightSelect.value = '';
+  plantHeightCustom.value = '';
+  fruitLengthSelect.value = '';
+  fruitLengthCustom.value = '';
+  fruitWeightSelect.value = '';
+  fruitWeightCustom.value = '';
+  daysToMaturitySelect.value = '';
+  daysToMaturityCustom.value = '';
+  originInput.value = '';
+  
+  // Теперь устанавливаем значения из сорта
   editingVariety.value = { ...variety };
   editColors.value = Array.isArray(variety.color) ? [...variety.color] : [];
+  
+  console.log('editColors.value после инициализации:', editColors.value);
+  console.log('editColors.value тип:', typeof editColors.value, Array.isArray(editColors.value));
+  
   // Высота куста
   if (typeof variety.plantHeight === 'string' && plantHeightOptions.includes(variety.plantHeight)) {
     plantHeightSelect.value = variety.plantHeight;
@@ -988,10 +1027,8 @@ function openEdit(variety: any) {
   } else if (variety.plantHeight) {
     plantHeightSelect.value = 'свой размер';
     plantHeightCustom.value = String(variety.plantHeight);
-  } else {
-    plantHeightSelect.value = '';
-    plantHeightCustom.value = '';
   }
+  
   // Длина плода
   if (typeof variety.fruitLength === 'string' && fruitLengthOptions.includes(variety.fruitLength)) {
     fruitLengthSelect.value = variety.fruitLength;
@@ -999,10 +1036,8 @@ function openEdit(variety: any) {
   } else if (variety.fruitLength) {
     fruitLengthSelect.value = 'свой размер';
     fruitLengthCustom.value = String(variety.fruitLength);
-  } else {
-    fruitLengthSelect.value = '';
-    fruitLengthCustom.value = '';
   }
+  
   // Вес плода
   if (typeof variety.weight === 'string' && fruitWeightOptions.includes(variety.weight)) {
     fruitWeightSelect.value = variety.weight;
@@ -1010,10 +1045,8 @@ function openEdit(variety: any) {
   } else if (variety.weight) {
     fruitWeightSelect.value = 'свой вариант';
     fruitWeightCustom.value = String(variety.weight);
-  } else {
-    fruitWeightSelect.value = '';
-    fruitWeightCustom.value = '';
   }
+  
   // Дни до созревания
   if (
     typeof variety.daysToMaturity === 'string' &&
@@ -1024,69 +1057,298 @@ function openEdit(variety: any) {
   } else if (variety.daysToMaturity) {
     daysToMaturitySelect.value = 'свой вариант';
     daysToMaturityCustom.value = String(variety.daysToMaturity);
-  } else {
-    daysToMaturitySelect.value = '';
-    daysToMaturityCustom.value = '';
   }
+  
   // Происхождение
   originInput.value = variety.origin || '';
   showEditDialog.value = true;
-  customColor.value = '';
 }
 async function saveEdit() {
-  if (!editingVariety.value) return;
-  const docRef = doc(db, 'varieties_v2', editingVariety.value.id);
-  const updateData: any = { color: editColors.value };
-  // Высота куста
-  if (plantHeightSelect.value === 'свой размер' && plantHeightCustom.value) {
-    updateData.plantHeight = plantHeightCustom.value;
-  } else if (plantHeightSelect.value) {
-    updateData.plantHeight = plantHeightSelect.value;
+  if (!editingVariety.value) {
+    console.error('editingVariety.value пуст');
+    return;
   }
-  // Длина плода
-  if (fruitLengthSelect.value === 'свой размер' && fruitLengthCustom.value) {
-    updateData.fruitLength = fruitLengthCustom.value;
-  } else if (fruitLengthSelect.value) {
-    updateData.fruitLength = fruitLengthSelect.value;
-  }
-  // Вес плода
-  if (fruitWeightSelect.value === 'свой вариант' && fruitWeightCustom.value) {
-    updateData.weight = fruitWeightCustom.value;
-  } else if (fruitWeightSelect.value) {
-    updateData.weight = fruitWeightSelect.value;
-  }
-  // Дни до созревания
-  if (daysToMaturitySelect.value === 'свой вариант' && daysToMaturityCustom.value) {
-    updateData.daysToMaturity = daysToMaturityCustom.value;
-  } else if (daysToMaturitySelect.value) {
-    updateData.daysToMaturity = daysToMaturitySelect.value;
-  }
-  // Происхождение
-  updateData.origin = originInput.value;
-  await updateDoc(docRef, updateData);
-  editingVariety.value.color = [...editColors.value];
-  editingVariety.value.plantHeight = updateData.plantHeight;
-  editingVariety.value.fruitLength = updateData.fruitLength;
-  editingVariety.value.weight = updateData.weight;
-  editingVariety.value.daysToMaturity = updateData.daysToMaturity;
-  editingVariety.value.origin = updateData.origin;
-  store.setLastManualUpdate();
-  showEditDialog.value = false;
-  if (store.currentPage > 1) {
-    await store.fetchPrevPage();
-    await store.fetchNextPage();
-  } else {
-    await store.fetchFirstPage();
+  
+    console.log('saveEdit вызвана');
+    console.log('editColors.value перед сохранением:', editColors.value);
+    console.log('editColors.value тип:', typeof editColors.value, Array.isArray(editColors.value));
+    console.log('editColors.value длина:', editColors.value?.length);
+    console.log('colorInput.value:', colorInput.value);
+    console.log('customColor.value:', customColor.value);
+  
+  try {
+    // Проверяем, есть ли недобавленные цвета в полях ввода
+    if (colorInput.value || customColor.value) {
+      const hasUnaddedColors = colorInput.value || customColor.value;
+      console.warn('Обнаружены недобавленные цвета в полях ввода:', { colorInput: colorInput.value, customColor: customColor.value });
+      $q.notify({
+        color: 'warning',
+        message: 'Есть недобавленные цвета. Нажмите "Добавить" или выберите цвет из списка.',
+        icon: 'info',
+        timeout: 3000,
+      });
+      // Автоматически пытаемся добавить
+      if (colorInput.value) {
+        addColorFromInput(colorInput.value);
+      }
+      if (customColor.value) {
+        addColor();
+      }
+    }
+    
+    const docRef = doc(db, 'varieties_v2', editingVariety.value.id);
+    const updateData: any = {};
+    
+    // Сохраняем цвета (всегда, даже если массив пустой)
+    // Нормализуем цвета: убираем пустые и дубликаты
+    const normalizedColors = (editColors.value || [])
+      .map(c => String(c).trim())
+      .filter(c => c.length > 0)
+      .filter((c, index, arr) => arr.indexOf(c) === index); // убираем дубликаты
+    
+    updateData.color = normalizedColors;
+    
+    console.log('Сохранение цветов:', updateData.color);
+    console.log('editColors.value:', editColors.value);
+    console.log('Нормализованные цвета:', normalizedColors);
+    
+    // Высота куста
+    if (plantHeightSelect.value === 'свой размер' && plantHeightCustom.value) {
+      updateData.plantHeight = plantHeightCustom.value;
+    } else if (plantHeightSelect.value) {
+      updateData.plantHeight = plantHeightSelect.value;
+    } else {
+      // Если поле не заполнено, удаляем его из документа
+      updateData.plantHeight = null;
+    }
+    
+    // Длина плода
+    if (fruitLengthSelect.value === 'свой размер' && fruitLengthCustom.value) {
+      updateData.fruitLength = fruitLengthCustom.value;
+    } else if (fruitLengthSelect.value) {
+      updateData.fruitLength = fruitLengthSelect.value;
+    } else {
+      updateData.fruitLength = null;
+    }
+    
+    // Вес плода
+    if (fruitWeightSelect.value === 'свой вариант' && fruitWeightCustom.value) {
+      updateData.weight = fruitWeightCustom.value;
+    } else if (fruitWeightSelect.value) {
+      updateData.weight = fruitWeightSelect.value;
+    } else {
+      updateData.weight = null;
+    }
+    
+    // Дни до созревания
+    if (daysToMaturitySelect.value === 'свой вариант' && daysToMaturityCustom.value) {
+      updateData.daysToMaturity = daysToMaturityCustom.value;
+    } else if (daysToMaturitySelect.value) {
+      updateData.daysToMaturity = daysToMaturitySelect.value;
+    } else {
+      updateData.daysToMaturity = null;
+    }
+    
+    // Происхождение
+    updateData.origin = originInput.value || null;
+    
+    console.log('Данные для сохранения:', updateData);
+    console.log('ID сорта:', editingVariety.value.id);
+    
+    await updateDoc(docRef, updateData);
+    console.log('Данные сохранены в Firestore');
+    
+    // Проверяем, что данные действительно сохранились
+    const verifyDoc = await getDoc(docRef);
+    if (!verifyDoc.exists()) {
+      throw new Error('Документ не найден после сохранения');
+    }
+    
+    const savedData = verifyDoc.data() as PepperVarietyV2;
+    console.log('Проверка сохраненных данных:', savedData);
+    if (savedData.color) {
+      console.log('Сохраненные цвета:', savedData.color);
+    } else {
+      console.warn('Цвета не найдены в сохраненных данных');
+    }
+    
+    // Очищаем кэш, чтобы обновить данные
+    globalCache.clear();
+    
+    // Обновляем локальный объект из сохраненных данных Firestore
+    editingVariety.value.color = Array.isArray(savedData.color) ? [...savedData.color] : [];
+    // Обновляем все поля из сохраненных данных
+    if (savedData.plantHeight !== undefined) {
+      editingVariety.value.plantHeight = savedData.plantHeight;
+    } else {
+      delete editingVariety.value.plantHeight;
+    }
+    if (savedData.fruitLength !== undefined) {
+      editingVariety.value.fruitLength = savedData.fruitLength;
+    } else {
+      delete editingVariety.value.fruitLength;
+    }
+    if (savedData.weight !== undefined) {
+      editingVariety.value.weight = savedData.weight;
+    } else {
+      delete editingVariety.value.weight;
+    }
+    if (savedData.daysToMaturity !== undefined) {
+      editingVariety.value.daysToMaturity = savedData.daysToMaturity;
+    } else {
+      delete editingVariety.value.daysToMaturity;
+    }
+    if (savedData.origin !== undefined) {
+      editingVariety.value.origin = savedData.origin;
+    } else {
+      delete editingVariety.value.origin;
+    }
+    
+    // Обновляем данные в store.items вручную (реактивно)
+    const index = store.items.findIndex((v) => v.id === editingVariety.value.id);
+    if (index !== -1) {
+      // Создаем новый массив для реактивности
+      const updatedItems = [...store.items];
+      updatedItems[index] = { ...editingVariety.value };
+      store.items = updatedItems;
+    }
+    
+    // Также обновляем в allItems, если они загружены
+    const allIndex = store.allItems.findIndex((v) => v.id === editingVariety.value.id);
+    if (allIndex !== -1) {
+      const updatedAllItems = [...store.allItems];
+      updatedAllItems[allIndex] = { ...editingVariety.value };
+      store.allItems = updatedAllItems;
+    }
+    
+    // Обновляем в результатах поиска, если активен поиск
+    if (hasActiveSearch.value) {
+      const searchIndex = searchResults.value.findIndex((v) => v.id === editingVariety.value.id);
+      if (searchIndex !== -1) {
+        const updatedSearchResults = [...searchResults.value];
+        updatedSearchResults[searchIndex] = { ...editingVariety.value };
+        searchResults.value = updatedSearchResults;
+      }
+    }
+    
+    store.setLastManualUpdate();
+    showEditDialog.value = false;
+    
+    $q.notify({
+      color: 'positive',
+      message: 'Изменения сохранены',
+      icon: 'check_circle',
+    });
+    
+    // Не перезагружаем данные сразу - они уже обновлены вручную выше
+    // Вместо этого просто обновим через небольшую задержку, чтобы убедиться, что Firestore обновился
+    setTimeout(async () => {
+      // Обновляем список (с очищенным кэшем) для синхронизации с Firestore
+      if (store.currentPage > 1) {
+        await store.fetchPrevPage();
+        await store.fetchNextPage();
+      } else {
+        await store.fetchFirstPage();
+      }
+    }, 500);
+  } catch (error: any) {
+    console.error('Ошибка сохранения:', error);
+    $q.notify({
+      color: 'negative',
+      message: 'Ошибка при сохранении: ' + (error.message || 'Неизвестная ошибка'),
+      icon: 'error',
+    });
   }
 }
-function addColor() {
-  if (colorInput.value && !editColors.value.includes(colorInput.value)) {
-    editColors.value.push(colorInput.value);
+// Функция для добавления цвета из выбранного значения (автоматически при выборе)
+function addColorFromInput(colorValue: string) {
+  if (!colorValue) return;
+  
+  const normalized = String(colorValue).trim();
+  if (!normalized) return;
+  
+  const normalizedColors = editColors.value.map(c => String(c).trim().toLowerCase());
+  const normalizedLower = normalized.toLowerCase();
+  
+  if (!normalizedColors.includes(normalizedLower)) {
+    // Создаем новый массив для реактивности
+    editColors.value = [...editColors.value, normalized];
     colorInput.value = '';
+    console.log('Цвет автоматически добавлен из colorInput:', normalized);
+    console.log('editColors.value после добавления:', editColors.value);
+    $q.notify({
+      color: 'positive',
+      message: `Цвет "${normalized}" добавлен`,
+      icon: 'check_circle',
+      timeout: 2000,
+    });
+  } else {
+    console.log('Цвет уже добавлен:', normalized);
+    colorInput.value = '';
+    $q.notify({
+      color: 'warning',
+      message: 'Цвет уже добавлен',
+      icon: 'info',
+      timeout: 2000,
+    });
   }
-  if (customColor.value && !editColors.value.includes(customColor.value)) {
-    editColors.value.push(customColor.value);
-    customColor.value = '';
+}
+
+function addColor() {
+  console.log('addColor вызвана');
+  console.log('colorInput.value:', colorInput.value);
+  console.log('customColor.value:', customColor.value);
+  console.log('editColors.value до добавления:', editColors.value);
+  
+  let added = false;
+  const normalizedColors = editColors.value.map(c => String(c).trim().toLowerCase());
+  
+  if (colorInput.value) {
+    const normalized = String(colorInput.value).trim();
+    const normalizedLower = normalized.toLowerCase();
+    console.log('Проверка colorInput:', { normalized, normalizedLower, normalizedColors });
+    if (normalized && !normalizedColors.includes(normalizedLower)) {
+      // Создаем новый массив для реактивности
+      editColors.value = [...editColors.value, normalized];
+      colorInput.value = '';
+      added = true;
+      console.log('Цвет добавлен из colorInput:', normalized);
+      console.log('editColors.value после добавления:', editColors.value);
+    } else {
+      console.log('Цвет не добавлен из colorInput (уже есть или пустой)');
+    }
+  }
+  
+  if (customColor.value) {
+    const normalized = String(customColor.value).trim();
+    const normalizedLower = normalized.toLowerCase();
+    console.log('Проверка customColor:', { normalized, normalizedLower, normalizedColors });
+    if (normalized && !normalizedColors.includes(normalizedLower)) {
+      // Создаем новый массив для реактивности
+      editColors.value = [...editColors.value, normalized];
+      customColor.value = '';
+      added = true;
+      console.log('Цвет добавлен из customColor:', normalized);
+      console.log('editColors.value после добавления:', editColors.value);
+    } else {
+      console.log('Цвет не добавлен из customColor (уже есть или пустой)');
+    }
+  }
+  
+  if (!added) {
+    $q.notify({
+      color: 'warning',
+      message: 'Цвет уже добавлен или поле пустое',
+      icon: 'info',
+      timeout: 2000,
+    });
+  } else {
+    $q.notify({
+      color: 'positive',
+      message: 'Цвет добавлен',
+      icon: 'check_circle',
+      timeout: 2000,
+    });
   }
 }
 function removeColor(color: string) {
