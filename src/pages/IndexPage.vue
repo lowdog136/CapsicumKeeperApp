@@ -39,17 +39,17 @@
         <div v-else>
       <!-- Краткая статистика -->
       <div class="row q-col-gutter-md q-mb-xl">
-        <div class="col-12 col-sm-6 col-md-3">
+        <div class="col-12 col-sm-6 col-md-4">
           <q-card class="text-center">
             <q-card-section>
-              <q-icon name="local_florist" size="48px" color="primary" />
-              <div class="text-h4 q-mt-sm">{{ peppers.length }}</div>
-              <div class="text-body2 text-grey-6">Ваших перцев</div>
+              <q-icon name="eco" size="48px" color="green" />
+              <div class="text-h4 q-mt-sm">{{ activePeppersCount }}</div>
+              <div class="text-body2 text-grey-6">Растет перцев</div>
             </q-card-section>
           </q-card>
         </div>
 
-        <div class="col-12 col-sm-6 col-md-3">
+        <div class="col-12 col-sm-6 col-md-4">
           <q-card class="text-center">
             <q-card-section>
               <q-icon name="favorite" size="48px" color="red" />
@@ -59,17 +59,7 @@
           </q-card>
         </div>
 
-        <div class="col-12 col-sm-6 col-md-3">
-          <q-card class="text-center">
-            <q-card-section>
-              <q-icon name="eco" size="48px" color="green" />
-              <div class="text-h4 q-mt-sm">{{ activePeppersCount }}</div>
-              <div class="text-body2 text-grey-6">Активных</div>
-            </q-card-section>
-          </q-card>
-        </div>
-
-        <div class="col-12 col-sm-6 col-md-3">
+        <div class="col-12 col-sm-6 col-md-4">
           <q-card class="text-center">
             <q-card-section>
               <q-icon name="library_books" size="48px" color="blue" />
@@ -80,100 +70,39 @@
         </div>
       </div>
 
-      <!-- Быстрые действия -->
-      <div class="row q-col-gutter-md q-mb-xl" v-if="userStore.user">
-        <div class="col-12 col-md-6">
-          <q-card class="text-center">
-            <q-card-section>
-              <q-icon name="list" size="48px" color="primary" />
-              <div class="text-h6 q-mt-sm">Мои перцы</div>
-              <div class="text-body2 text-grey-6 q-mt-sm">
-                Просмотрите и управляйте своими перцами
+      <!-- Требуют внимания -->
+      <div v-if="peppersRequiringAttention.length > 0" class="q-mb-xl">
+        <div class="text-h6 q-mb-md">Требуют внимания</div>
+        <q-card>
+          <q-card-section>
+            <div class="row q-col-gutter-md">
+              <div
+                v-for="item in peppersRequiringAttention"
+                :key="item.pepper.id"
+                class="col-12 col-sm-6 col-md-4"
+              >
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="row items-center q-gutter-sm">
+                      <q-icon
+                        :name="getAttentionIcon(item)"
+                        :color="getAttentionColor(item)"
+                        size="32px"
+                      />
+                      <div class="col">
+                        <div class="text-subtitle2">{{ item.pepper.name }}</div>
+                        <div class="text-caption text-grey-6">{{ item.pepper.variety }}</div>
+                        <div class="text-caption text-grey-7 q-mt-xs">
+                          {{ item.reason }}
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
               </div>
-              <q-btn
-                color="primary"
-                label="Перейти к списку"
-                class="q-mt-md darker-primary-btn"
-                @click="$router.push('/peppers')"
-              />
-            </q-card-section>
-          </q-card>
-        </div>
-
-        <div class="col-12 col-md-6">
-          <q-card class="text-center">
-            <q-card-section>
-              <q-icon name="add" size="48px" color="green" />
-              <div class="text-h6 q-mt-sm">Добавить перец</div>
-              <div class="text-body2 text-grey-6 q-mt-sm">
-                Добавьте новый перец в свою коллекцию
-              </div>
-              <q-btn
-                color="primary"
-                label="Добавить"
-                class="q-mt-md darker-primary-btn"
-                @click="$router.push('/add-pepper')"
-              />
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
-
-      <!-- Дополнительные возможности -->
-      <div class="row q-col-gutter-md">
-        <div class="col-12 col-md-4">
-          <q-card class="text-center">
-            <q-card-section>
-              <q-icon name="library_books" size="48px" color="primary" />
-              <div class="text-h6 q-mt-sm">Библиотека сортов</div>
-              <div class="text-body2 text-grey-6 q-mt-sm">
-                Изучите разнообразие сортов перцев со всего мира
-              </div>
-              <q-btn
-                color="primary"
-                label="Перейти в библиотеку"
-                class="q-mt-md darker-primary-btn"
-                @click="$router.push('/variety-library')"
-              />
-            </q-card-section>
-          </q-card>
-        </div>
-
-        <div class="col-12 col-md-4" v-if="userStore.user">
-          <q-card class="text-center">
-            <q-card-section>
-              <q-icon name="favorite" size="48px" color="red" />
-              <div class="text-h6 q-mt-sm">Избранные сорта</div>
-              <div class="text-body2 text-grey-6 q-mt-sm">
-                Ваши любимые сорта для будущих посадок
-              </div>
-              <q-btn
-                color="red"
-                label="Посмотреть избранное"
-                class="q-mt-md"
-                @click="$router.push('/favorites')"
-              />
-            </q-card-section>
-          </q-card>
-        </div>
-
-        <div class="col-12" :class="userStore.user ? 'col-md-4' : 'col-md-8'">
-          <q-card class="text-center">
-            <q-card-section>
-              <q-icon name="assignment" size="48px" color="orange" />
-              <div class="text-h6 q-mt-sm">Дорожная карта</div>
-              <div class="text-body2 text-grey-6 q-mt-sm">
-                Планы развития и новые функции приложения
-              </div>
-              <q-btn
-                color="orange"
-                label="Посмотреть планы"
-                class="q-mt-md"
-                @click="$router.push('/roadmap')"
-              />
-            </q-card-section>
-          </q-card>
-        </div>
+            </div>
+          </q-card-section>
+        </q-card>
       </div>
     </div>
     </div>
@@ -201,16 +130,17 @@
 import { storeToRefs } from 'pinia';
 import { usePepperFirestore } from 'stores/pepper-firestore';
 import { useUserStore } from 'stores/user-store';
-import { useVarietyLibraryStore } from 'stores/variety-library';
+import { useVarietyLibraryV2Store } from 'stores/variety-library-v2';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { ref, computed, onMounted, watch } from 'vue';
+import type { Pepper } from 'src/components/models';
+import { getCurrentSoilNutrients } from 'src/utils/nutrient-absorption';
 
 const pepperFirestore = usePepperFirestore();
 const userStore = useUserStore();
-const varietyStore = useVarietyLibraryStore();
+const varietyStore = useVarietyLibraryV2Store();
 const { peppers } = storeToRefs(pepperFirestore);
-const { varieties } = storeToRefs(varietyStore);
 const $q = useQuasar();
 const $router = useRouter();
 
@@ -219,13 +149,127 @@ const heroIconSize = computed(() => ($q.screen.lt.sm ? '48px' : '80px'));
 const guestIconSize = computed(() => ($q.screen.lt.sm ? '72px' : '100px'));
 
 // Вычисляемые свойства для статистики
-const favoritePeppersCount = computed(() => peppers.value.filter((p) => p.isFavorite).length);
-
 const activePeppersCount = computed(
   () => peppers.value.filter((p) => p.stage !== 'сбор урожая').length,
 );
 
-const varietiesCount = computed(() => varieties.value.length);
+const favoritePeppersCount = computed(() => peppers.value.filter((p) => p.isFavorite).length);
+
+const varietiesCount = computed(() => {
+  // Используем allItems если они загружены, иначе items (пагинированные)
+  if (varietyStore.allItems.length > 0) {
+    return varietyStore.allItems.length;
+  }
+  // Если allItems не загружены, используем totalCount если он установлен, иначе items.length
+  return varietyStore.totalCount > 0 ? varietyStore.totalCount : varietyStore.items.length;
+});
+
+
+// Пороговые значения для питательных веществ (в граммах)
+const NUTRIENT_THRESHOLDS = {
+  N: 2.0,  // Азот
+  P: 1.5,  // Фосфор
+  K: 2.0,  // Калий
+  Ca: 1.0, // Кальций
+  Mg: 0.5, // Магний
+  S: 0.5,  // Сера
+};
+
+// Интерфейс для перцев, требующих внимания
+interface PepperRequiringAttention {
+  pepper: Pepper;
+  reason: string;
+}
+
+// Перцы, требующие внимания
+const peppersRequiringAttention = computed<PepperRequiringAttention[]>(() => {
+  const now = new Date();
+  const attentionPeppers: PepperRequiringAttention[] = [];
+
+  for (const pepper of peppers.value) {
+    // Пропускаем перцы на стадии "сбор урожая"
+    if (pepper.stage === 'сбор урожая') continue;
+
+    const reasons: string[] = [];
+
+    // Проверка полива по расписанию
+    if (pepper.wateringSchedule?.minIntervalHours) {
+      const lastWateredAt = pepper.soilNutrients?.lastWateredAt
+        ? new Date(pepper.soilNutrients.lastWateredAt)
+        : pepper.wateringHistory && pepper.wateringHistory.length > 0
+          ? new Date(pepper.wateringHistory[pepper.wateringHistory.length - 1].date)
+          : null;
+
+      if (lastWateredAt) {
+        const hoursSinceWatering = (now.getTime() - lastWateredAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceWatering >= pepper.wateringSchedule.minIntervalHours) {
+          reasons.push('Требуется полив');
+        }
+      } else if (pepper.wateringSchedule.minIntervalHours > 0) {
+        // Если никогда не поливали, но есть расписание - тоже требует внимания
+        reasons.push('Требуется полив');
+      }
+    }
+
+    // Проверка низкого уровня питательных веществ
+    if (pepper.soilNutrients) {
+      const currentNutrients = getCurrentSoilNutrients(pepper.soilNutrients, pepper.stage);
+      const lowElements: string[] = [];
+
+      // Проверяем макроэлементы
+      const macroElements: Array<keyof typeof NUTRIENT_THRESHOLDS> = ['N', 'P', 'K', 'Ca', 'Mg', 'S'];
+      for (const element of macroElements) {
+        const current = currentNutrients[element] ?? 0;
+        const threshold = NUTRIENT_THRESHOLDS[element];
+        if (current < threshold) {
+          const elementNames: Record<string, string> = {
+            N: 'азот',
+            P: 'фосфор',
+            K: 'калий',
+            Ca: 'кальций',
+            Mg: 'магний',
+            S: 'сера',
+          };
+          lowElements.push(elementNames[element] || element);
+        }
+      }
+
+      if (lowElements.length > 0) {
+        reasons.push(`Низкий уровень: ${lowElements.join(', ')}`);
+      }
+    }
+
+    if (reasons.length > 0) {
+      attentionPeppers.push({
+        pepper,
+        reason: reasons.join('; '),
+      });
+    }
+  }
+
+  return attentionPeppers;
+});
+
+// Вспомогательные функции для отображения
+function getAttentionIcon(item: PepperRequiringAttention): string {
+  if (item.reason.includes('полив')) {
+    return 'water_drop';
+  }
+  if (item.reason.includes('Низкий уровень')) {
+    return 'science';
+  }
+  return 'warning';
+}
+
+function getAttentionColor(item: PepperRequiringAttention): string {
+  if (item.reason.includes('полив')) {
+    return 'blue';
+  }
+  if (item.reason.includes('Низкий уровень')) {
+    return 'orange';
+  }
+  return 'warning';
+}
 
 // Загружаем данные при изменении авторизации
 watch(
@@ -246,7 +290,16 @@ onMounted(async () => {
 
 async function loadData() {
   try {
-    await Promise.all([pepperFirestore.fetchPeppers(), varietyStore.loadVarieties()]);
+    await Promise.all([
+      pepperFirestore.fetchPeppers(),
+      varietyStore.fetchFirstPage(),
+    ]);
+    // Пытаемся загрузить все элементы для точного подсчета (в фоне, не блокируя)
+    if (varietyStore.allItems.length === 0) {
+      varietyStore.fetchAllItems().catch(() => {
+        // Если не удалось загрузить все, используем пагинированные данные
+      });
+    }
   } catch (error) {
     console.error('Error loading data:', error);
   }
